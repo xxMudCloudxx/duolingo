@@ -2,9 +2,10 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { InfinityIcon } from "lucide-react";
+import { courses } from "@/db/schema";
 
 type Props = {
-  activeCourse: any; // TODP: DB type
+  activeCourse: typeof courses.$inferSelect;
   hearts: number;
   points: number;
   hasActiveSubscription: boolean;
@@ -23,8 +24,8 @@ export const UserProgress = ({
             src={activeCourse.imgSrc}
             alt={activeCourse.title}
             className="rounded-md border"
-            width={32}
-            height={32}
+            width={48}
+            height={48}
           />
         </Button>
       </Link>
@@ -32,8 +33,8 @@ export const UserProgress = ({
         <Button variant={"ghost"} className="text-orange-500">
           <Image
             src={"/points.svg"}
-            height={28}
-            width={28}
+            height={32}
+            width={32}
             alt="Points"
             className="mr-2"
           />
@@ -44,8 +45,8 @@ export const UserProgress = ({
         <Button variant={"ghost"} className="text-rose-500">
           <Image
             src={"/heart.svg"}
-            height={22}
-            width={22}
+            height={30}
+            width={30}
             alt="Hearts"
             className="mr-2"
           />
