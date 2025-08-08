@@ -3,7 +3,6 @@ import { Check } from "lucide-react";
 import Image from "next/image";
 
 type Props = {
-  key: number;
   id: number;
   title: string;
   imgSrc: string;
@@ -13,7 +12,6 @@ type Props = {
 };
 
 export const Card = ({
-  key,
   id,
   title,
   imgSrc,
@@ -23,7 +21,6 @@ export const Card = ({
 }: Props) => {
   return (
     <div
-      key={key}
       onClick={() => onClick(id)}
       className={cn(
         "h-full border-2 rounded-xl border-b-4 hover:bg-black/5 cursor-pointer",
