@@ -23,8 +23,10 @@ export const List = ({ courses, activeCourseId }: Props) => {
     }
 
     startTranstition(() => {
-      debugger;
-      upsertUserProgress(id).catch(() => toast.error("something went wrong."));
+      upsertUserProgress(id).catch((error) => {
+        console.error(error);
+        toast.error(`something went wrong: ${error}.`);
+      });
     });
   };
 
