@@ -28,20 +28,19 @@ export const userProgress = pgTable("user_progress", {
 export const units = pgTable("units", {
   id: serial("id").primaryKey(),
   title: text("title").notNull(),
-  coursesId: integer("courses_id").references(() => courses.id, {
+  courseId: integer("course_id").references(() => courses.id, {
     onDelete: "cascade",
   }),
   description: text("description").notNull(),
   order: integer("order").notNull(),
 });
 
-export const lessions = pgTable("lessions", {
+export const lessons = pgTable("lessons", {
   id: serial("id").primaryKey(),
   title: text("title").notNull(),
   unitId: integer("unit_id").references(() => units.id, {
     onDelete: "cascade",
   }),
-  description: text("description").notNull(),
   order: integer("order").notNull(),
 });
 
@@ -49,14 +48,15 @@ export const challengesEnum = pgEnum("type", ["SELECT", "ASSIST"]);
 
 export const challenges = pgTable("challenges", {
   id: serial("id").primaryKey(),
-  lessionsId: integer("lessions_id").references(() => lessions.id, {
+  lessonsId: integer("lessons_id").references(() => lessons.id, {
     onDelete: "cascade",
   }),
   type: challengesEnum("type").notNull(),
   question: text("question").notNull(),
+  order: integer("order").notNull(),
 });
 
-export const challengesOptions = pgTable("challenge_options", {
+export const challengeOptions = pgTable("challenge_options", {
   id: serial("id").primaryKey(),
   challengeId: integer("challenge_id")
     .references(() => challenges.id, { onDelete: "cascade" })
@@ -67,7 +67,7 @@ export const challengesOptions = pgTable("challenge_options", {
   audioSrc: text("audio_src"),
 });
 
-export const challengesProgress = pgTable("challenges_progress", {
+export const challengeProgress = pgTable("challenge_progress", {
   id: serial("id").primaryKey(),
   userId: text("user_id").notNull(),
   challengeId: integer("challenge_id")
@@ -89,44 +89,44 @@ export const userProgressRelations = relations(userProgress, ({ one }) => ({
 
 export const unitsRelations = relations(units, ({ one, many }) => ({
   course: one(courses, {
-    fields: [units.coursesId],
+    fields: [units.courseId],
     references: [courses.id],
   }),
-  lessions: many(lessions),
+  lessons: many(lessons),
 }));
 
-export const lessionsRelations = relations(lessions, ({ one, many }) => ({
+export const lessonsRelations = relations(lessons, ({ one, many }) => ({
   unit: one(units, {
-    fields: [lessions.unitId],
+    fields: [lessons.unitId],
     references: [units.id],
   }),
   challenges: many(challenges),
 }));
 
 export const challengesRelations = relations(challenges, ({ one, many }) => ({
-  lessions: one(lessions, {
-    fields: [challenges.lessionsId],
-    references: [lessions.id],
+  lessons: one(lessons, {
+    fields: [challenges.lessonsId],
+    references: [lessons.id],
   }),
-  challengesOptions: many(challengesOptions),
-  challengesProgress: many(challengesProgress),
+  challengesOptions: many(challengeOptions),
+  challengesProgress: many(challengeProgress),
 }));
 
 export const challengesOptionsRelations = relations(
-  challengesOptions,
+  challengeOptions,
   ({ one }) => ({
     challenge: one(challenges, {
-      fields: [challengesOptions.challengeId],
+      fields: [challengeOptions.challengeId],
       references: [challenges.id],
     }),
   })
 );
 
 export const challengesProgressRelations = relations(
-  challengesProgress,
+  challengeProgress,
   ({ one }) => ({
     challenge: one(challenges, {
-      fields: [challengesProgress.challengeId],
+      fields: [challengeProgress.challengeId],
       references: [challenges.id],
     }),
   })

@@ -24,6 +24,11 @@ export const List = ({ courses, activeCourseId }: Props) => {
 
     startTranstition(() => {
       upsertUserProgress(id).catch((error) => {
+        // 检查捕获到的错误是否是 Next.js 的重定向信号
+        if (error.message.includes("NEXT_REDIRECT")) {
+          // 如果是，说明重定向即将发生，这是预期行为，直接返回即可
+          return;
+        }
         console.error(error);
         toast.error(`something went wrong: ${error}.`);
       });
