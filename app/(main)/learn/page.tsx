@@ -2,19 +2,35 @@ import { FeedWrapper } from "@/components/feed-wrapper";
 import { StickyWrapper } from "@/components/sticky-wrapper";
 import { Header } from "./header";
 import { UserProgress } from "@/components/user-progress";
-import { getUnits, getUserProgress } from "@/db/queries";
+import {
+  getCourseProgress,
+  getLessonPercentage,
+  getUnits,
+  getUserProgress,
+} from "@/db/queries";
 import { redirect } from "next/navigation";
+import { Unit } from "./unit";
+import { lessons, units as unitsSchema } from "@/db/schema";
 
 const LearnPage = async () => {
   const userProgressPromiseData = getUserProgress();
   const unitsPromiseData = getUnits();
+  const courseProgressPromiseData = getCourseProgress();
+  const lessonPercentagePromiseData = getLessonPercentage();
 
-  const [userProgress, units] = await Promise.all([
-    userProgressPromiseData,
-    unitsPromiseData,
-  ]);
+  const [userProgress, units, courseProgress, lessonPercentage] =
+    await Promise.all([
+      userProgressPromiseData,
+      unitsPromiseData,
+      courseProgressPromiseData,
+      lessonPercentagePromiseData,
+    ]);
 
   if (!userProgress || !userProgress.activeCourse) {
+    redirect("/courses");
+  }
+
+  if (!courseProgress) {
     redirect("/courses");
   }
 
@@ -30,10 +46,23 @@ const LearnPage = async () => {
       </StickyWrapper>
       <FeedWrapper>
         <Header title={userProgress.activeCourse.title} />
-        {units?.map((unit) => (
-          <div key={unit.id} className="mb-10">
-            {JSON.stringify(unit)}
-          </div>
+        {units.map((unit) => (
+          <Unit
+            key={unit.id}
+            id={unit.id}
+            order={unit.order}
+            description={unit.description}
+            title={unit.title}
+            lessons={unit.lessons}
+            activeLesson={
+              courseProgress.activeLesson as
+                | (typeof lessons.$inferSelect & {
+                    unit: typeof unitsSchema.$inferSelect;
+                  })
+                | undefined
+            }
+            activeLessonPercentage={lessonPercentage}
+          />
         ))}
       </FeedWrapper>
     </div>
