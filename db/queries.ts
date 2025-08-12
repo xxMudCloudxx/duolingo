@@ -25,7 +25,7 @@ export const getUnits = cache(async () => {
         with: {
           challenges: {
             with: {
-              challengesProgress: {
+              challengeProgress: {
                 where: eq(challengeProgress.userId, userId),
               },
             },
@@ -42,9 +42,9 @@ export const getUnits = cache(async () => {
       }
       const allCompletedChallenges = lesson.challenges.every((challenge) => {
         return (
-          challenge.challengesProgress &&
-          challenge.challengesProgress.length > 0 &&
-          challenge.challengesProgress.every((progress) => progress.completed)
+          challenge.challengeProgress &&
+          challenge.challengeProgress.length > 0 &&
+          challenge.challengeProgress.every((progress) => progress.completed)
         );
       });
 
@@ -106,7 +106,7 @@ export const getCourseProgress = cache(async () => {
           unit: true,
           challenges: {
             with: {
-              challengesProgress: {
+              challengeProgress: {
                 where: eq(challengeProgress.userId, userId),
               },
             },
@@ -121,9 +121,9 @@ export const getCourseProgress = cache(async () => {
     .find((lesson) => {
       return lesson.challenges.some((challenge) => {
         return (
-          !challenge.challengesProgress ||
-          challenge.challengesProgress.length === 0 ||
-          challenge.challengesProgress.some(
+          !challenge.challengeProgress ||
+          challenge.challengeProgress.length === 0 ||
+          challenge.challengeProgress.some(
             (progress) => progress.completed === false
           )
         );
@@ -152,20 +152,24 @@ export const getLesson = cache(async (id?: number) => {
       challenges: {
         orderBy: (challenges, { asc }) => [asc(challenges.order)],
         with: {
-          challengesProgress: {
+          challengeProgress: {
             where: eq(challengeProgress.userId, userId),
           },
-          challengesOptions: true,
+          challengeOptions: true,
         },
       },
     },
   });
 
-  const normalizedChallenges = data?.challenges.map((challenge) => {
+  if (!data) {
+    return null;
+  }
+
+  const normalizedChallenges = data.challenges.map((challenge) => {
     const completed =
-      challenge.challengesProgress &&
-      challenge.challengesProgress.length > 0 &&
-      challenge.challengesProgress.every((progress) => progress.completed);
+      challenge.challengeProgress &&
+      challenge.challengeProgress.length > 0 &&
+      challenge.challengeProgress.every((progress) => progress.completed);
 
     return { ...challenge, completed };
   });
@@ -186,16 +190,12 @@ export const getLessonPercentage = cache(async () => {
     return 0;
   }
 
-  const completedChallenges = lesson.challenges?.filter(
+  const completedChallenges = lesson.challenges.filter(
     (challenge) => challenge.completed
   );
 
-  if (!completedChallenges || !lesson.challenges) {
-    return 0;
-  }
-
   const percentage = Math.round(
-    (completedChallenges?.length / lesson.challenges?.length) * 100
+    (completedChallenges.length / lesson.challenges.length) * 100
   );
 
   return percentage;

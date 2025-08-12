@@ -28,9 +28,11 @@ export const userProgress = pgTable("user_progress", {
 export const units = pgTable("units", {
   id: serial("id").primaryKey(),
   title: text("title").notNull(),
-  courseId: integer("course_id").references(() => courses.id, {
-    onDelete: "cascade",
-  }),
+  courseId: integer("course_id")
+    .references(() => courses.id, {
+      onDelete: "cascade",
+    })
+    .notNull(),
   description: text("description").notNull(),
   order: integer("order").notNull(),
 });
@@ -38,9 +40,11 @@ export const units = pgTable("units", {
 export const lessons = pgTable("lessons", {
   id: serial("id").primaryKey(),
   title: text("title").notNull(),
-  unitId: integer("unit_id").references(() => units.id, {
-    onDelete: "cascade",
-  }),
+  unitId: integer("unit_id")
+    .references(() => units.id, {
+      onDelete: "cascade",
+    })
+    .notNull(),
   order: integer("order").notNull(),
 });
 
@@ -48,9 +52,11 @@ export const challengesEnum = pgEnum("type", ["SELECT", "ASSIST"]);
 
 export const challenges = pgTable("challenges", {
   id: serial("id").primaryKey(),
-  lessonsId: integer("lessons_id").references(() => lessons.id, {
-    onDelete: "cascade",
-  }),
+  lessonsId: integer("lessons_id")
+    .references(() => lessons.id, {
+      onDelete: "cascade",
+    })
+    .notNull(),
   type: challengesEnum("type").notNull(),
   question: text("question").notNull(),
   order: integer("order").notNull(),
@@ -108,8 +114,8 @@ export const challengesRelations = relations(challenges, ({ one, many }) => ({
     fields: [challenges.lessonsId],
     references: [lessons.id],
   }),
-  challengesOptions: many(challengeOptions),
-  challengesProgress: many(challengeProgress),
+  challengeOptions: many(challengeOptions),
+  challengeProgress: many(challengeProgress),
 }));
 
 export const challengesOptionsRelations = relations(
