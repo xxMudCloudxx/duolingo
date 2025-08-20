@@ -1,6 +1,21 @@
-import { clerkMiddleware } from "@clerk/nextjs/server";
+import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
-export default clerkMiddleware();
+// 使用 createRouteMatcher 定义公共路由
+const isPublicRoute = createRouteMatcher([
+  "/api/webhooks/stripe",
+  "/",
+  // 如果想让其他页面公开，可以加在这里，例如：
+  // '/',
+  // '/sign-in(.*)',
+  // '/sign-up(.*)',
+]);
+
+export default clerkMiddleware(async (auth, req) => {
+  // 如果当前请求的路由不是公开的，则执行保护逻辑
+  if (!isPublicRoute(req)) {
+    await auth.protect();
+  }
+});
 
 export const config = {
   matcher: [
