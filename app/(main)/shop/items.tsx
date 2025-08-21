@@ -1,11 +1,9 @@
 "use client";
 
 import { refillHearts } from "@/actions/user-progress";
-import {
-  purchaseSubscription,
-  getSubscriptionPlans,
-} from "@/actions/user-subscription";
+import { purchaseSubscription } from "@/actions/user-subscription";
 import { Button } from "@/components/ui/button";
+import { POINTS_TO_REFILL } from "@/constants";
 import Image from "next/image";
 import { useTransition } from "react";
 import { toast } from "sonner";
@@ -15,8 +13,6 @@ type Props = {
   points: number;
   hasActiveSubscription: boolean;
 };
-
-const POINTS_TO_REFILL = 10;
 
 export const Items = ({ hearts, points, hasActiveSubscription }: Props) => {
   const [pending, startTransition] = useTransition();
@@ -77,7 +73,10 @@ export const Items = ({ hearts, points, hasActiveSubscription }: Props) => {
             5,000 points, valid for 30 days
           </p>
         </div>
-        <Button onClick={() => onUpgrade('MONTHLY')} disabled={pending || hasActiveSubscription}>
+        <Button
+          onClick={() => onUpgrade("MONTHLY")}
+          disabled={pending || hasActiveSubscription}
+        >
           {hasActiveSubscription ? "Subscribed" : "Purchase"}
         </Button>
       </div>
@@ -93,7 +92,10 @@ export const Items = ({ hearts, points, hasActiveSubscription }: Props) => {
             30,000 points, valid for 1 year
           </p>
         </div>
-        <Button onClick={() => onUpgrade('YEARLY')} disabled={pending || hasActiveSubscription}>
+        <Button
+          onClick={() => onUpgrade("YEARLY")}
+          disabled={pending || hasActiveSubscription}
+        >
           {hasActiveSubscription ? "Subscribed" : "Purchase"}
         </Button>
       </div>
@@ -109,7 +111,10 @@ export const Items = ({ hearts, points, hasActiveSubscription }: Props) => {
             99,999 points, valid forever
           </p>
         </div>
-        <Button onClick={() => onUpgrade('LIFETIME')} disabled={pending || hasActiveSubscription}>
+        <Button
+          onClick={() => onUpgrade("LIFETIME")}
+          disabled={pending || hasActiveSubscription}
+        >
           {hasActiveSubscription ? "Subscribed" : "Purchase"}
         </Button>
       </div>

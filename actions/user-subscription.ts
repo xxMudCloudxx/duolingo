@@ -6,30 +6,35 @@ import { getUserSubscription } from "@/db/queries";
 import { auth } from "@clerk/nextjs/server";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import {
+  SUBSCRIPTION_PLANS_LIFETIME_POINTS,
+  SUBSCRIPTION_PLANS_MONTHLY_POINTS,
+  SUBSCRIPTION_PLANS_YEARLY_POINTS,
+} from "@/constants";
 
 // Subscription plans configuration
 const SUBSCRIPTION_PLANS = {
   MONTHLY: {
     type: "MONTHLY" as const,
-    points: 5000,
+    points: SUBSCRIPTION_PLANS_MONTHLY_POINTS,
     duration: 30 * 24 * 60 * 60 * 1000, // 30 days
     name: "Monthly Plan",
-    description: "5,000 points, valid for 30 days"
+    description: "5,000 points, valid for 30 days",
   },
   YEARLY: {
     type: "YEARLY" as const,
-    points: 30000,
+    points: SUBSCRIPTION_PLANS_YEARLY_POINTS,
     duration: 365 * 24 * 60 * 60 * 1000, // 365 days
     name: "Yearly Plan",
-    description: "30,000 points, valid for 1 year"
+    description: "30,000 points, valid for 1 year",
   },
   LIFETIME: {
     type: "LIFETIME" as const,
-    points: 99999,
+    points: SUBSCRIPTION_PLANS_LIFETIME_POINTS,
     duration: null, // permanent
     name: "Lifetime Plan",
-    description: "99,999 points, valid forever"
-  }
+    description: "99,999 points, valid forever",
+  },
 };
 
 export const purchaseSubscription = async (
