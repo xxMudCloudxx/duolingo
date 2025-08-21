@@ -82,6 +82,22 @@ export const challengeProgress = pgTable("challenge_progress", {
     .notNull(),
   completed: boolean("completed").notNull().default(false),
 });
+
+export const subscriptionTypeEnum = pgEnum("subscription_type", [
+  "MONTHLY",
+  "YEARLY",
+  "LIFETIME",
+]);
+
+export const userSubscription = pgTable("user_subscription", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull().unique(),
+  subscriptionType: subscriptionTypeEnum("subscription_type").notNull(),
+  points: integer("points").notNull(),
+  expiresAt: timestamp("expires_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
 export const coursesRelations = relations(courses, ({ many }) => ({
   userProgress: many(userProgress),
   units: many(units),
@@ -138,15 +154,3 @@ export const challengesProgressRelations = relations(
     }),
   })
 );
-
-export const subscriptionTypeEnum = pgEnum("subscription_type", ["MONTHLY", "YEARLY", "LIFETIME"]);
-
-export const userSubscription = pgTable("user_subscription", {
-  id: serial("id").primaryKey(),
-  userId: text("user_id").notNull().unique(),
-  subscriptionType: subscriptionTypeEnum("subscription_type").notNull(),
-  points: integer("points").notNull(),
-  expiresAt: timestamp("expires_at"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
-});
