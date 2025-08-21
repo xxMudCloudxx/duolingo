@@ -3,7 +3,7 @@
 import { refillHearts } from "@/actions/user-progress";
 import { purchaseSubscription } from "@/actions/user-subscription";
 import { Button } from "@/components/ui/button";
-import { POINTS_TO_REFILL } from "@/constants";
+import { POINTS_TO_REFILL, SUBSCRIPTION_PLANS } from "@/constants";
 import Image from "next/image";
 import { useTransition } from "react";
 import { toast } from "sonner";
@@ -12,9 +12,15 @@ type Props = {
   hearts: number;
   points: number;
   hasActiveSubscription: boolean;
+  isLifeTime: boolean;
 };
 
-export const Items = ({ hearts, points, hasActiveSubscription }: Props) => {
+export const Items = ({
+  hearts,
+  points,
+  hasActiveSubscription,
+  isLifeTime,
+}: Props) => {
   const [pending, startTransition] = useTransition();
 
   const onRefillHearts = () => {
@@ -61,63 +67,26 @@ export const Items = ({ hearts, points, hasActiveSubscription }: Props) => {
           )}
         </Button>
       </div>
-
-      {/* Monthly Plan */}
-      <div className="flex items-center w-full p-4 pt-8 gap-x-4 border-t-2">
-        <Image src="/unlimited.svg" alt="Monthly" height={60} width={60} />
-        <div className="flex-1">
-          <p className="text-neutral-700 text-base lg:text-xl font-bold">
-            Monthly Plan
-          </p>
-          <p className="text-neutral-500 text-sm">
-            5,000 points, valid for 30 days
-          </p>
-        </div>
-        <Button
-          onClick={() => onUpgrade("MONTHLY")}
-          disabled={pending || hasActiveSubscription}
+      {Object.values(SUBSCRIPTION_PLANS).map((plan, index) => (
+        <div
+          key={`${index}-${plan.name}`}
+          className="flex items-center w-full p-4 pt-8 gap-x-4 border-t-2"
         >
-          {hasActiveSubscription ? "Subscribed" : "Purchase"}
-        </Button>
-      </div>
-
-      {/* Yearly Plan */}
-      <div className="flex items-center w-full p-4 gap-x-4 border-t-2">
-        <Image src="/unlimited.svg" alt="Yearly" height={60} width={60} />
-        <div className="flex-1">
-          <p className="text-neutral-700 text-base lg:text-xl font-bold">
-            Yearly Plan
-          </p>
-          <p className="text-neutral-500 text-sm">
-            30,000 points, valid for 1 year
-          </p>
+          <Image src="/unlimited.svg" alt="Monthly" height={60} width={60} />
+          <div className="flex-1">
+            <p className="text-neutral-700 text-base lg:text-xl font-bold">
+              {plan.name}
+            </p>
+            <p className="text-neutral-500 text-sm">{plan.description}</p>
+          </div>
+          <Button
+            onClick={() => onUpgrade(plan.type)}
+            disabled={pending || points < plan.points || isLifeTime}
+          >
+            {hasActiveSubscription ? "Extend" : "Purchase"}
+          </Button>
         </div>
-        <Button
-          onClick={() => onUpgrade("YEARLY")}
-          disabled={pending || hasActiveSubscription}
-        >
-          {hasActiveSubscription ? "Subscribed" : "Purchase"}
-        </Button>
-      </div>
-
-      {/* Lifetime Plan */}
-      <div className="flex items-center w-full p-4 gap-x-4 border-t-2">
-        <Image src="/unlimited.svg" alt="Lifetime" height={60} width={60} />
-        <div className="flex-1">
-          <p className="text-neutral-700 text-base lg:text-xl font-bold">
-            Lifetime Plan
-          </p>
-          <p className="text-neutral-500 text-sm">
-            99,999 points, valid forever
-          </p>
-        </div>
-        <Button
-          onClick={() => onUpgrade("LIFETIME")}
-          disabled={pending || hasActiveSubscription}
-        >
-          {hasActiveSubscription ? "Subscribed" : "Purchase"}
-        </Button>
-      </div>
+      ))}
     </ul>
   );
 };

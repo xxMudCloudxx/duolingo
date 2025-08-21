@@ -47,6 +47,7 @@ const ShopPage = async () => {
             hearts={userProgress.hearts}
             points={userProgress.points}
             hasActiveSubscription={isPro}
+            isLifeTime={userSubscription?.expiresAt === null ? true : false}
           />
         </div>
       </FeedWrapper>
