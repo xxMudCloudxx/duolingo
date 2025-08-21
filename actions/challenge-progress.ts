@@ -1,5 +1,6 @@
 "use server";
 
+import { CHALLENGE_POINTS } from "@/constants";
 import db from "@/db/drizzle";
 import { getUserProgress, getUserSubscription } from "@/db/queries";
 import { challengeProgress, challenges, userProgress } from "@/db/schema";
@@ -60,7 +61,7 @@ export const upsertChallengeProgress = async (challengeId: number) => {
       .update(userProgress)
       .set({
         hearts: Math.min(currentUserProgress.hearts + 1, 5),
-        points: currentUserProgress.points + 10,
+        points: currentUserProgress.points + CHALLENGE_POINTS,
       })
       .where(eq(userProgress.userId, userId));
 
@@ -80,7 +81,7 @@ export const upsertChallengeProgress = async (challengeId: number) => {
   await db
     .update(userProgress)
     .set({
-      points: currentUserProgress.points + 10,
+      points: currentUserProgress.points + CHALLENGE_POINTS,
     })
     .where(eq(userProgress.userId, userId));
 
