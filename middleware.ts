@@ -2,7 +2,6 @@ import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
 // 使用 createRouteMatcher 定义公共路由
 const isPublicRoute = createRouteMatcher([
-  "/api/webhooks/stripe",
   "/",
   // 如果想让其他页面公开，可以加在这里，例如：
   // '/',

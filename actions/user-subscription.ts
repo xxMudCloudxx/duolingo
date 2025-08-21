@@ -1,57 +1,91 @@
 "use server";
 
-import { stripe } from "@/lib/stripe";
-import { absoluteUrl } from "@/lib/utils";
+import db from "@/db/drizzle";
+import { userSubscription } from "@/db/schema";
 import { getUserSubscription } from "@/db/queries";
-import { auth, currentUser } from "@clerk/nextjs/server";
+import { auth } from "@clerk/nextjs/server";
+import { eq } from "drizzle-orm";
+import { revalidatePath } from "next/cache";
 
-const returnUrl = absoluteUrl("/shop");
+// Subscription plans configuration
+const SUBSCRIPTION_PLANS = {
+  MONTHLY: {
+    type: "MONTHLY" as const,
+    points: 5000,
+    duration: 30 * 24 * 60 * 60 * 1000, // 30 days
+    name: "Monthly Plan",
+    description: "5,000 points, valid for 30 days"
+  },
+  YEARLY: {
+    type: "YEARLY" as const,
+    points: 30000,
+    duration: 365 * 24 * 60 * 60 * 1000, // 365 days
+    name: "Yearly Plan",
+    description: "30,000 points, valid for 1 year"
+  },
+  LIFETIME: {
+    type: "LIFETIME" as const,
+    points: 99999,
+    duration: null, // permanent
+    name: "Lifetime Plan",
+    description: "99,999 points, valid forever"
+  }
+};
 
-export const createStripeUrl = async () => {
+export const purchaseSubscription = async (
+  planType: keyof typeof SUBSCRIPTION_PLANS
+) => {
   const { userId } = await auth();
-  const user = await currentUser();
 
-  if (!userId || !user) {
-    throw new Error("Unauthorized");
+  if (!userId) {
+    throw new Error("Unauthorized access");
   }
 
-  const userSubscription = await getUserSubscription();
-
-  if (userSubscription && userSubscription.stripeCustomerId) {
-    const stripeSession = await stripe.billingPortal.sessions.create({
-      customer: userSubscription.stripeCustomerId,
-      return_url: returnUrl,
-    });
-
-    return { data: stripeSession.url };
+  const plan = SUBSCRIPTION_PLANS[planType];
+  if (!plan) {
+    throw new Error("Invalid subscription plan");
   }
 
-  const stripeSession = await stripe.checkout.sessions.create({
-    mode: "subscription",
-    payment_method_types: ["card"],
-    customer_email: user.emailAddresses[0].emailAddress,
-    line_items: [
-      {
-        quantity: 1,
-        price_data: {
-          currency: "USD",
-          product_data: {
-            name: "Duolingo Pro",
-            description: "Unlimited Hearts",
-          },
-          unit_amount: 1000, // $10.00USD
-          recurring: {
-            interval: "month",
-          },
-        },
-      },
-    ],
-    metadata: {
-      userId,
-    },
-    success_url: returnUrl,
-    cancel_url: returnUrl,
-  });
+  try {
+    const existingSubscription = await getUserSubscription();
+    const now = new Date();
+    const expiresAt = plan.duration
+      ? new Date(now.getTime() + plan.duration)
+      : null;
 
-  return { data: stripeSession.url };
+    if (existingSubscription) {
+      // 更新现有订阅
+      await db
+        .update(userSubscription)
+        .set({
+          subscriptionType: plan.type,
+          points: plan.points,
+          expiresAt,
+          updatedAt: now,
+        })
+        .where(eq(userSubscription.userId, userId));
+    } else {
+      // 创建新订阅
+      await db.insert(userSubscription).values({
+        userId,
+        subscriptionType: plan.type,
+        points: plan.points,
+        expiresAt,
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+
+    revalidatePath("/shop");
+    revalidatePath("/learn");
+
+    return { success: true, message: `Successfully purchased ${plan.name}` };
+  } catch (error) {
+    console.error("Failed to purchase subscription:", error);
+    throw new Error("Failed to purchase subscription, please try again later");
+  }
+};
+
+export const getSubscriptionPlans = async () => {
+  return SUBSCRIPTION_PLANS;
 };

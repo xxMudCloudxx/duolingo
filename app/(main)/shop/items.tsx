@@ -1,10 +1,13 @@
 "use client";
 
 import { refillHearts } from "@/actions/user-progress";
-import { createStripeUrl } from "@/actions/user-subscription";
+import {
+  purchaseSubscription,
+  getSubscriptionPlans,
+} from "@/actions/user-subscription";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
-import { startTransition, useTransition } from "react";
+import { useTransition } from "react";
 import { toast } from "sonner";
 
 type Props = {
@@ -28,15 +31,15 @@ export const Items = ({ hearts, points, hasActiveSubscription }: Props) => {
     });
   };
 
-  const onUpgrade = () => {
+  const onUpgrade = (planType: "MONTHLY" | "YEARLY" | "LIFETIME") => {
     startTransition(() => {
-      createStripeUrl()
+      purchaseSubscription(planType)
         .then((response) => {
-          if (response.data) {
-            window.location.href = response.data;
+          if (response.success) {
+            toast.success(response.message);
           }
         })
-        .catch(() => toast.error("Something went wrong"));
+        .catch((error) => toast.error(error.message || "Purchase failed"));
     });
   };
   return (
@@ -62,15 +65,52 @@ export const Items = ({ hearts, points, hasActiveSubscription }: Props) => {
           )}
         </Button>
       </div>
+
+      {/* Monthly Plan */}
       <div className="flex items-center w-full p-4 pt-8 gap-x-4 border-t-2">
-        <Image src="/unlimited.svg" alt="Unlimited" height={60} width={60} />
+        <Image src="/unlimited.svg" alt="Monthly" height={60} width={60} />
         <div className="flex-1">
           <p className="text-neutral-700 text-base lg:text-xl font-bold">
-            Unlimited hearts
+            Monthly Plan
+          </p>
+          <p className="text-neutral-500 text-sm">
+            5,000 points, valid for 30 days
           </p>
         </div>
-        <Button onClick={onUpgrade} disabled={pending}>
-          {hasActiveSubscription ? "setting" : "upgrade"}
+        <Button onClick={() => onUpgrade('MONTHLY')} disabled={pending || hasActiveSubscription}>
+          {hasActiveSubscription ? "Subscribed" : "Purchase"}
+        </Button>
+      </div>
+
+      {/* Yearly Plan */}
+      <div className="flex items-center w-full p-4 gap-x-4 border-t-2">
+        <Image src="/unlimited.svg" alt="Yearly" height={60} width={60} />
+        <div className="flex-1">
+          <p className="text-neutral-700 text-base lg:text-xl font-bold">
+            Yearly Plan
+          </p>
+          <p className="text-neutral-500 text-sm">
+            30,000 points, valid for 1 year
+          </p>
+        </div>
+        <Button onClick={() => onUpgrade('YEARLY')} disabled={pending || hasActiveSubscription}>
+          {hasActiveSubscription ? "Subscribed" : "Purchase"}
+        </Button>
+      </div>
+
+      {/* Lifetime Plan */}
+      <div className="flex items-center w-full p-4 gap-x-4 border-t-2">
+        <Image src="/unlimited.svg" alt="Lifetime" height={60} width={60} />
+        <div className="flex-1">
+          <p className="text-neutral-700 text-base lg:text-xl font-bold">
+            Lifetime Plan
+          </p>
+          <p className="text-neutral-500 text-sm">
+            99,999 points, valid forever
+          </p>
+        </div>
+        <Button onClick={() => onUpgrade('LIFETIME')} disabled={pending || hasActiveSubscription}>
+          {hasActiveSubscription ? "Subscribed" : "Purchase"}
         </Button>
       </div>
     </ul>
