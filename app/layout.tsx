@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { ExitModal } from "@/components/modals/exit-modal";
 import { HeartsModal } from "@/components/modals/hearts-modal";
 import { PracticeModal } from "@/components/modals/practice-modal";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 const font = Nunito({
   variable: "--font-geist-sans",
@@ -26,6 +27,7 @@ export default function RootLayout({
     <ClerkProvider>
       <html lang="en">
         <body className={`${font.variable} antialiased`}>
+          <SpeedInsights />
           <Toaster />
           <ExitModal />
           <HeartsModal />
