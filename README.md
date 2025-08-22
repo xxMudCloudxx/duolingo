@@ -162,12 +162,6 @@ duolingo/
 
 ### 🎯 性能指标
 
-**Core Web Vitals 表现**
-- **LCP (Largest Contentful Paint)** < 2.5s
-- **FID (First Input Delay)** < 100ms  
-- **CLS (Cumulative Layout Shift)** < 0.1
-- **TTFB (Time to First Byte)** < 600ms
-
 **构建优化结果**
 ```
 ┌ ○ (Static)   # 静态生成页面

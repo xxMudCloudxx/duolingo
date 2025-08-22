@@ -18,7 +18,6 @@ const AdminPage = () => {
   }
 
   if (user?.publicMetadata?.role === "admin") {
-    console.log(user.publicMetadata);
     return <App />;
   } else {
     redirect("/");

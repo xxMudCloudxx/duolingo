@@ -40,10 +40,10 @@ const nextConfig: NextConfig = {
             key: "Access-Control-Allow-Headers",
             value: "Content-Type, Authorization",
           },
-          {
-            key: "Content-Range",
-            value: "bytes : 0-9/*",
-          },
+          // {
+          //   key: "Content-Range",
+          //   value: "bytes : 0-9/*",
+          // },
           {
             key: "Cache-Control",
             value: "public, max-age=300, s-maxage=300",
