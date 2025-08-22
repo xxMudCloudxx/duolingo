@@ -1,6 +1,4 @@
 import { FeedWrapper } from "@/components/feed-wrapper";
-import { Skeleton } from "@/components/ui/skeleton";
-import { StickyWrapper } from "@/components/sticky-wrapper";
 import {
   HeaderSkeleton,
   StickyWrapperSkeleton,

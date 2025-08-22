@@ -22,8 +22,6 @@ export const Unit = ({
   title,
   description,
   activeLesson,
-  id,
-  order,
   lessons,
   activeLessonPercentage,
 }: Props) => {
