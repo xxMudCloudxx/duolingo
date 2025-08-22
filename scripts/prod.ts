@@ -310,7 +310,7 @@ const main = async () => {
                   challengeId: challenge.id,
                   correct: true,
                   text: "el zombie",
-                  audioSrc: "/es_zombie.mp3",
+                  audioSrc: "/audio/es_zombie.mp3",
                 },
                 {
                   challengeId: challenge.id,

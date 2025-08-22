@@ -47,10 +47,14 @@ export const Quiz = ({
   });
 
   const { width, height } = useWindowSize();
-  const [correctAudio, , correctControls] = useAudio({ src: "/correct.wav" });
-  const [finishAudio, , finishControls] = useAudio({ src: "/finish.mp3" });
+  const [correctAudio, , correctControls] = useAudio({
+    src: "/audio/common/correct.wav",
+  });
+  const [finishAudio, , finishControls] = useAudio({
+    src: "/audio/common/finish.mp3",
+  });
   const [incorrectAudio, , incorrectControls] = useAudio({
-    src: "/incorrect.wav",
+    src: "/audio/common/incorrect.wav",
   });
 
   const [pending, startTransition] = useTransition();
@@ -177,7 +181,6 @@ export const Quiz = ({
 
             correctControls.play();
             setStatus("correct");
-            setProcessingStage("complete");
             setPercentage((prev) => prev + 100 / challenges.length);
 
             // This is a practice
@@ -198,7 +201,6 @@ export const Quiz = ({
 
             incorrectControls.play();
             setStatus("wrong");
-            setProcessingStage("complete");
 
             if (!response?.error) {
               setHearts((prev) => Math.max(prev - 1, 0));
