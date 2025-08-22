@@ -25,13 +25,13 @@ export const Header = () => {
         </ClerkLoading>
         <ClerkLoaded>
           <SignedIn>
-            <UserButton afterSignOutUrl="/" />
+            <UserButton />
           </SignedIn>
           <SignedOut>
             <SignInButton
               mode="modal"
-              fallbackRedirectUrl={"/learn"}
-              signUpFallbackRedirectUrl={"/learn"}
+              forceRedirectUrl={"/learn"}
+              signUpForceRedirectUrl={"/learn"}
             >
               <Button size="lg" variant={"ghost"}>
                 Login

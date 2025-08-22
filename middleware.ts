@@ -3,10 +3,9 @@ import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 // 使用 createRouteMatcher 定义公共路由
 const isPublicRoute = createRouteMatcher([
   "/",
-  // 如果想让其他页面公开，可以加在这里，例如：
-  // '/',
-  // '/sign-in(.*)',
-  // '/sign-up(.*)',
+  "/sign-in(.*)",
+  "/sign-up(.*)",
+  "/api/webhooks(.*)",
 ]);
 
 export default clerkMiddleware(async (auth, req) => {
@@ -15,6 +14,16 @@ export default clerkMiddleware(async (auth, req) => {
     await auth.protect();
   }
 });
+
+// 添加调试信息（仅在开发环境）
+if (process.env.NODE_ENV === 'development') {
+  console.log('Clerk middleware loaded with public routes:', [
+    "/",
+    "/sign-in(.*)",
+    "/sign-up(.*)",
+    "/api/webhooks(.*)",
+  ]);
+}
 
 export const config = {
   matcher: [

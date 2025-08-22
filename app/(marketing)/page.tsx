@@ -29,8 +29,8 @@ export default function Home() {
             <SignedOut>
               <SignUpButton
                 mode="modal"
-                fallbackRedirectUrl={"/learn"}
-                signInFallbackRedirectUrl={"/learn"}
+                forceRedirectUrl={"/learn"}
+                signInForceRedirectUrl={"/learn"}
               >
                 <Button size={"lg"} variant={"secondary"} className="w-full">
                   Get Started
@@ -38,8 +38,8 @@ export default function Home() {
               </SignUpButton>
               <SignInButton
                 mode="modal"
-                fallbackRedirectUrl={"/learn"}
-                signUpFallbackRedirectUrl={"/learn"}
+                forceRedirectUrl={"/learn"}
+                signUpForceRedirectUrl={"/learn"}
               >
                 <Button
                   size={"lg"}
