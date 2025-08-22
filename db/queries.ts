@@ -35,6 +35,7 @@ export const getUnits = cache(async () => {
           id: true,
           title: true,
           order: true,
+          unitId: true,
         },
         with: {
           challenges: {
