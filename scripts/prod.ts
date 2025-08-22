@@ -25,7 +25,7 @@ const main = async () => {
     // Insert courses
     const courses = await db
       .insert(schema.courses)
-      .values([{ title: "Spanish", imgSrc: "/es.svg" }])
+      .values([{ title: "Spanish", imgSrc: "/flags/es.svg" }])
       .returning();
 
     // For each course, insert units
@@ -125,22 +125,22 @@ const main = async () => {
                   challengeId: challenge.id,
                   correct: true,
                   text: "el hombre",
-                  imgSrc: "/man.svg",
-                  audioSrc: "/es_man.mp3",
+                  imgSrc: "/icons/man.svg",
+                  audioSrc: "/audio/es/es_man.mp3",
                 },
                 {
                   challengeId: challenge.id,
                   correct: false,
                   text: "la mujer",
-                  imgSrc: "/woman.svg",
-                  audioSrc: "/es_woman.mp3",
+                  imgSrc: "/icons/woman.svg",
+                  audioSrc: "/audio/es/es_woman.mp3",
                 },
                 {
                   challengeId: challenge.id,
                   correct: false,
                   text: "el chico",
-                  imgSrc: "/boy.svg",
-                  audioSrc: "/es_boy.mp3",
+                  imgSrc: "/icons/boy.svg",
+                  audioSrc: "/audio/es/es_boy.mp3",
                 },
               ]);
             }
@@ -151,22 +151,22 @@ const main = async () => {
                   challengeId: challenge.id,
                   correct: true,
                   text: "la mujer",
-                  imgSrc: "/woman.svg",
-                  audioSrc: "/es_woman.mp3",
+                  imgSrc: "/icons/woman.svg",
+                  audioSrc: "/audio/es/es_woman.mp3",
                 },
                 {
                   challengeId: challenge.id,
                   correct: false,
                   text: "el chico",
-                  imgSrc: "/boy.svg",
-                  audioSrc: "/es_boy.mp3",
+                  imgSrc: "/icons/boy.svg",
+                  audioSrc: "/audio/es/es_boy.mp3",
                 },
                 {
                   challengeId: challenge.id,
                   correct: false,
                   text: "el hombre",
-                  imgSrc: "/man.svg",
-                  audioSrc: "/es_man.mp3",
+                  imgSrc: "/icons/man.svg",
+                  audioSrc: "/audio/es/es_man.mp3",
                 },
               ]);
             }
@@ -177,22 +177,22 @@ const main = async () => {
                   challengeId: challenge.id,
                   correct: false,
                   text: "la mujer",
-                  imgSrc: "/woman.svg",
-                  audioSrc: "/es_woman.mp3",
+                  imgSrc: "/icons/woman.svg",
+                  audioSrc: "/audio/es/es_woman.mp3",
                 },
                 {
                   challengeId: challenge.id,
                   correct: false,
                   text: "el hombre",
-                  imgSrc: "/man.svg",
-                  audioSrc: "/es_man.mp3",
+                  imgSrc: "/icons/man.svg",
+                  audioSrc: "/audio/es/es_man.mp3",
                 },
                 {
                   challengeId: challenge.id,
                   correct: true,
                   text: "el chico",
-                  imgSrc: "/boy.svg",
-                  audioSrc: "/es_boy.mp3",
+                  imgSrc: "/icons/boy.svg",
+                  audioSrc: "/audio/es/es_boy.mp3",
                 },
               ]);
             }
@@ -203,19 +203,19 @@ const main = async () => {
                   challengeId: challenge.id,
                   correct: false,
                   text: "la mujer",
-                  audioSrc: "/es_woman.mp3",
+                  audioSrc: "/audio/es/es_woman.mp3",
                 },
                 {
                   challengeId: challenge.id,
                   correct: true,
                   text: "el hombre",
-                  audioSrc: "/es_man.mp3",
+                  audioSrc: "/audio/es/es_man.mp3",
                 },
                 {
                   challengeId: challenge.id,
                   correct: false,
                   text: "el chico",
-                  audioSrc: "/es_boy.mp3",
+                  audioSrc: "/audio/es/es_boy.mp3",
                 },
               ]);
             }
@@ -226,22 +226,22 @@ const main = async () => {
                   challengeId: challenge.id,
                   correct: false,
                   text: "el hombre",
-                  imgSrc: "/man.svg",
-                  audioSrc: "/es_man.mp3",
+                  imgSrc: "/icons/man.svg",
+                  audioSrc: "/audio/es/es_man.mp3",
                 },
                 {
                   challengeId: challenge.id,
                   correct: false,
                   text: "la mujer",
-                  imgSrc: "/woman.svg",
-                  audioSrc: "/es_woman.mp3",
+                  imgSrc: "/icons/woman.svg",
+                  audioSrc: "/audio/es/es_woman.mp3",
                 },
                 {
                   challengeId: challenge.id,
                   correct: true,
                   text: "el zombie",
-                  imgSrc: "/zombie.svg",
-                  audioSrc: "/es_zombie.mp3",
+                  imgSrc: "/icons/zombie.svg",
+                  audioSrc: "/audio/es/es_zombie.mp3",
                 },
               ]);
             }
@@ -252,22 +252,22 @@ const main = async () => {
                   challengeId: challenge.id,
                   correct: true,
                   text: "el robot",
-                  imgSrc: "/robot.svg",
-                  audioSrc: "/es_robot.mp3",
+                  imgSrc: "/icons/robot.svg",
+                  audioSrc: "/audio/es/es_robot.mp3",
                 },
                 {
                   challengeId: challenge.id,
                   correct: false,
                   text: "el zombie",
-                  imgSrc: "/zombie.svg",
-                  audioSrc: "/es_zombie.mp3",
+                  imgSrc: "/icons/zombie.svg",
+                  audioSrc: "/audio/es/es_zombie.mp3",
                 },
                 {
                   challengeId: challenge.id,
                   correct: false,
                   text: "el chico",
-                  imgSrc: "/boy.svg",
-                  audioSrc: "/es_boy.mp3",
+                  imgSrc: "/icons/boy.svg",
+                  audioSrc: "/audio/es/es_boy.mp3",
                 },
               ]);
             }
@@ -278,22 +278,22 @@ const main = async () => {
                   challengeId: challenge.id,
                   correct: true,
                   text: "la nina",
-                  imgSrc: "/girl.svg",
-                  audioSrc: "/es_girl.mp3",
+                  imgSrc: "/icons/girl.svg",
+                  audioSrc: "/audio/es/es_girl.mp3",
                 },
                 {
                   challengeId: challenge.id,
                   correct: false,
                   text: "el zombie",
-                  imgSrc: "/zombie.svg",
-                  audioSrc: "/es_zombie.mp3",
+                  imgSrc: "/icons/zombie.svg",
+                  audioSrc: "/audio/es/es_zombie.mp3",
                 },
                 {
                   challengeId: challenge.id,
                   correct: false,
                   text: "el hombre",
-                  imgSrc: "/man.svg",
-                  audioSrc: "/es_man.mp3",
+                  imgSrc: "/icons/man.svg",
+                  audioSrc: "/audio/es/es_man.mp3",
                 },
               ]);
             }
@@ -304,7 +304,7 @@ const main = async () => {
                   challengeId: challenge.id,
                   correct: false,
                   text: "la mujer",
-                  audioSrc: "/es_woman.mp3",
+                  audioSrc: "/audio/es/es_woman.mp3",
                 },
                 {
                   challengeId: challenge.id,
@@ -316,7 +316,7 @@ const main = async () => {
                   challengeId: challenge.id,
                   correct: false,
                   text: "el chico",
-                  audioSrc: "/es_boy.mp3",
+                  audioSrc: "/audio/es/es_boy.mp3",
                 },
               ]);
             }

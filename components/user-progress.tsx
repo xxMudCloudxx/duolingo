@@ -32,7 +32,7 @@ export const UserProgress = ({
       <Link href={"/shop"}>
         <Button variant={"ghost"} className="text-orange-500">
           <Image
-            src={"/points.svg"}
+            src={"/icons/points.svg"}
             height={32}
             width={32}
             alt="Points"
@@ -44,7 +44,7 @@ export const UserProgress = ({
       <Link href={"/shop"}>
         <Button variant={"ghost"} className="text-rose-500">
           <Image
-            src={"/heart.svg"}
+            src={"/icons/heart.svg"}
             height={30}
             width={30}
             alt="Hearts"

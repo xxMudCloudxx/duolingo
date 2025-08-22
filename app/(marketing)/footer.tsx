@@ -7,7 +7,7 @@ export const Footer = () => {
       <div className="max-w-screen-lg mx-auto flex items-center justify-evenly h-full">
         <Button size={"lg"} variant={"ghost"}>
           <Image
-            src={"/hr.svg"}
+            src={"/flags/hr.svg"}
             alt="Croatian"
             height={32}
             width={40}
@@ -17,7 +17,7 @@ export const Footer = () => {
         </Button>
         <Button size={"lg"} variant={"ghost"}>
           <Image
-            src={"/es.svg"}
+            src={"/flags/es.svg"}
             alt="Spanish"
             height={32}
             width={40}
@@ -27,7 +27,7 @@ export const Footer = () => {
         </Button>
         <Button size={"lg"} variant={"ghost"}>
           <Image
-            src={"/fr.svg"}
+            src={"/flags/fr.svg"}
             alt="French"
             height={32}
             width={40}
@@ -37,7 +37,7 @@ export const Footer = () => {
         </Button>
         <Button size={"lg"} variant={"ghost"}>
           <Image
-            src={"/it.svg"}
+            src={"/flags/it.svg"}
             alt="Italian"
             height={32}
             width={40}
@@ -47,7 +47,7 @@ export const Footer = () => {
         </Button>
         <Button size={"lg"} variant={"ghost"}>
           <Image
-            src={"/jp.svg"}
+            src={"/flags/jp.svg"}
             alt="Jpanese"
             height={32}
             width={40}
@@ -57,7 +57,7 @@ export const Footer = () => {
         </Button>
         <Button size={"lg"} variant={"ghost"}>
           <Image
-            src={"/cn.svg"}
+            src={"/flags/cn.svg"}
             alt="Chinese"
             height={32}
             width={40}
