@@ -1,7 +1,7 @@
 "use client";
 
 import { challengeOptions, challenges, userSubscription } from "@/db/schema";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { Header } from "./header";
 import { QuestionBubble } from "./question-bubble";
 import { Challenge } from "./challenge";
@@ -16,6 +16,7 @@ import { useRouter } from "next/navigation";
 import Confetti from "react-confetti";
 import { useHeartsModal } from "@/store/use-hearts-modal";
 import { usePracticeModal } from "@/store/use-practice-modal";
+import { QuizLoading } from "@/components/loading-indicator";
 type Props = {
   initialPercentage: number;
   initialHearts: number;
@@ -47,11 +48,15 @@ export const Quiz = ({
 
   const { width, height } = useWindowSize();
   const [correctAudio, _c, correctControls] = useAudio({ src: "/correct.wav" });
-  const [finishAudio] = useAudio({ src: "/finish.mp3", autoPlay: true });
+  const [finishAudio, _f, finishControls] = useAudio({ src: "/finish.mp3" });
   const [incorrectAudio, _ic, incorrectControls] = useAudio({
     src: "/incorrect.wav",
   });
+
   const [pending, startTransition] = useTransition();
+  const [processingStage, setProcessingStage] = useState<
+    "loading" | "processing" | "complete"
+  >("loading");
   const router = useRouter();
 
   const [hearts, setHearts] = useState(initialHearts);
@@ -73,10 +78,19 @@ export const Quiz = ({
   const challenge = challenges[activeIndex];
   const options = challenge?.challengeOptions ?? [];
 
+  useEffect(() => {
+    // 只有当 challenge 不存在时 (即课程结束时) 才播放音效
+    if (!challenge) {
+      finishControls.play();
+    }
+  }, [challenge, finishControls]);
+
   if (!challenge) {
     return (
       <>
         {finishAudio}
+        {correctAudio}
+        {incorrectAudio}
         <Confetti
           recycle={false}
           numberOfPieces={500}
@@ -132,6 +146,7 @@ export const Quiz = ({
 
   const onContinue = () => {
     if (!selectedOption) return;
+    setProcessingStage("processing");
 
     if (status === "wrong") {
       setStatus("none");
@@ -162,6 +177,7 @@ export const Quiz = ({
 
             correctControls.play();
             setStatus("correct");
+            setProcessingStage("complete");
             setPercentage((prev) => prev + 100 / challenges.length);
 
             // This is a practice
@@ -182,6 +198,7 @@ export const Quiz = ({
 
             incorrectControls.play();
             setStatus("wrong");
+            setProcessingStage("complete");
 
             if (!response?.error) {
               setHearts((prev) => Math.max(prev - 1, 0));
@@ -196,6 +213,7 @@ export const Quiz = ({
     <>
       {correctAudio}
       {incorrectAudio}
+      {finishAudio}
       <Header
         hearts={hearts}
         percentage={percentage}
@@ -223,6 +241,13 @@ export const Quiz = ({
           </div>
         </div>
       </div>
+      {pending && (
+        <div className="fixed inset-0 bg-black/20 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 shadow-lg">
+            <QuizLoading stage={processingStage} />
+          </div>
+        </div>
+      )}
       <Footer
         disabled={pending || !selectedOption}
         status={status}

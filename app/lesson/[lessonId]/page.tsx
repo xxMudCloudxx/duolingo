@@ -7,7 +7,9 @@ type Props = {
   };
 };
 const LessonIdPage = async ({ params }: Props) => {
-  const lessonPromiseData = getLesson(params.lessonId);
+  const param = await params;
+  const lessonId = Number(param.lessonId);
+  const lessonPromiseData = getLesson(lessonId);
   const userSubscriptionPromiseData = getUserSubscription();
   const userProgressPromiseData = getUserProgress();
 
@@ -32,7 +34,7 @@ const LessonIdPage = async ({ params }: Props) => {
       initialLessonChallenges={lesson.challenges}
       initialHearts={userProgress.hearts}
       initialPercentage={initialPercentage}
-      userSubscription={userSubscription}
+      userSubscription={userSubscription!}
     />
   );
 };
