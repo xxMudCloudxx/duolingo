@@ -1,9 +1,21 @@
-import { Loader } from "lucide-react";
+import { FeedWrapper } from "@/components/feed-wrapper";
+import { Skeleton } from "@/components/ui/skeleton";
+import { StickyWrapper } from "@/components/sticky-wrapper";
+import {
+  HeaderSkeleton,
+  StickyWrapperSkeleton,
+  UnitSkeleton,
+} from "@/components/skeletons";
 
 const Loading = () => {
   return (
-    <div className="h-full w-full flex items-center justify-center">
-      <Loader className="h-6 w-6 text-muted-foreground animate-spin" />
+    <div className="flex flex-row-reverse gap-[48px] px-6">
+      <StickyWrapperSkeleton />
+      <FeedWrapper>
+        <HeaderSkeleton />
+        <UnitSkeleton />
+        <UnitSkeleton />
+      </FeedWrapper>
     </div>
   );
 };

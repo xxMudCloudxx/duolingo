@@ -23,6 +23,7 @@ export const List = ({ courses, activeCourseId }: Props) => {
     }
 
     startTranstition(() => {
+      router.push("/learn"); // 立即导航
       upsertUserProgress(id).catch((error) => {
         // 检查捕获到的错误是否是 Next.js 的重定向信号
         if (error.message.includes("NEXT_REDIRECT")) {
@@ -31,6 +32,7 @@ export const List = ({ courses, activeCourseId }: Props) => {
         }
         console.error(error);
         toast.error(`something went wrong: ${error}.`);
+        router.push("/courses");
       });
     });
   };

@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 import { Check } from "lucide-react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 
 type Props = {
   id: number;
@@ -19,8 +20,10 @@ export const Card = ({
   disabled,
   active,
 }: Props) => {
+  const router = useRouter();
   return (
     <div
+      onMouseEnter={() => router.prefetch("/learn")}
       onClick={() => onClick(id)}
       className={cn(
         "h-full border-2 rounded-xl border-b-4 hover:bg-black/5 cursor-pointer",

@@ -11,7 +11,6 @@ import { challengeProgress, challenges, userProgress } from "@/db/schema";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 
 export const upsertUserProgress = async (courseId: number) => {
   const { userId } = await auth();
@@ -41,7 +40,6 @@ export const upsertUserProgress = async (courseId: number) => {
     });
     revalidatePath("/courses");
     revalidatePath("/learn");
-    redirect("/learn");
   }
 
   await db.insert(userProgress).values({
@@ -53,7 +51,6 @@ export const upsertUserProgress = async (courseId: number) => {
 
   revalidatePath("/courses");
   revalidatePath("/learn");
-  redirect("/learn");
 };
 
 export const reduceHearts = async (challengeId: number) => {

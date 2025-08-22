@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { Check, Crown, Star } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
 
 type Props = {
   id: number;
@@ -26,6 +27,7 @@ export const LessonButton = ({
 }: Props) => {
   const cycleLength = 8;
   const cycleIndex = index % cycleLength;
+  const router = useRouter();
 
   let indentationLevel;
 
@@ -89,6 +91,7 @@ export const LessonButton = ({
                 size="rounded"
                 variant={locked ? "locked" : "secondary"}
                 className="h-[70px] w-[70px] border-b-8"
+                onMouseEnter={() => router.prefetch(href)}
               >
                 <Icon
                   className={cn(

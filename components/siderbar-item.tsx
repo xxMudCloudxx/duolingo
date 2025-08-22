@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 type Props = {
   label: string;
@@ -14,11 +14,14 @@ type Props = {
 export const SidebarItem = ({ label, iconSrc, href }: Props) => {
   const path = usePathname();
   const active = path === href;
+  const router = useRouter();
+
   return (
     <Button
       variant={active ? "sidebarOutline" : "sidebar"}
       asChild
       className="justify-start h-[52px]"
+      onMouseEnter={() => router.prefetch(href)}
     >
       <Link href={href}>
         <Image
