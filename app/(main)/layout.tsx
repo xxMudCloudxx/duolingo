@@ -1,4 +1,3 @@
-import { LazyLoaderInitializer } from "@/components/lazy-loader-initializer";
 import { MobileHeader } from "@/components/mobile-header";
 import { Sidebar } from "@/components/sidebar";
 
@@ -8,7 +7,6 @@ type props = {
 const MainLayout = ({ children }: props) => {
   return (
     <>
-      <LazyLoaderInitializer />
       <MobileHeader />
       <Sidebar className="hidden lg:flex" />
       <main className="lg:pl-[256px] h-full pt-[50px] lg:pt-0">
