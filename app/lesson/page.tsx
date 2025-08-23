@@ -1,6 +1,7 @@
 import { getLesson, getUserProgress, getUserSubscription } from "@/db/queries";
 import { redirect } from "next/navigation";
 import { Quiz } from "./quiz";
+import { courseTitleToLangCode } from "@/constants";
 
 const LessonPage = async () => {
   const lessonPromiseData = getLesson();
@@ -15,6 +16,8 @@ const LessonPage = async () => {
   if (!lesson || !userProgress) {
     redirect("/learn");
   }
+  const courseTitle = lesson.unit.course.title;
+  const languageCode = courseTitleToLangCode[courseTitle];
 
   const initialPercentage =
     (lesson.challenges.filter((challenge) => challenge.completed).length /
@@ -28,6 +31,7 @@ const LessonPage = async () => {
       initialHearts={userProgress.hearts}
       initialPercentage={initialPercentage}
       userSubscription={userSubscription!}
+      languageCode={languageCode}
     />
   );
 };

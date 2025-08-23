@@ -18,6 +18,7 @@ const main = async () => {
     await db.delete(schema.challengeOptions);
     await db.delete(schema.challengeProgress);
     await db.delete(schema.userSubscription);
+    await db.delete(schema.audioCache);
 
     // finished
     console.log("resetting finished");

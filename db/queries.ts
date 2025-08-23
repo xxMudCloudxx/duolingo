@@ -1,8 +1,9 @@
 import { cache } from "react";
 import db from "./drizzle";
 import { auth } from "@clerk/nextjs/server";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import {
+  audioCache,
   challengeProgress,
   courses,
   lessons,
@@ -10,6 +11,7 @@ import {
   userProgress,
   userSubscription,
 } from "./schema";
+import { courseTitleToLangCode } from "@/constants";
 
 export const getUnits = cache(async () => {
   const userProgress = await getUserProgress();
@@ -184,6 +186,15 @@ export const getLesson = cache(async (id?: number) => {
           challengeOptions: true,
         },
       },
+      unit: {
+        with: {
+          course: {
+            columns: {
+              title: true,
+            },
+          },
+        },
+      },
     },
   });
 
@@ -269,3 +280,51 @@ export const getTopTenUsers = cache(async () => {
 
   return data;
 });
+
+// 查询音频缓存
+export const getAudioCache = async (text: string, languageCode: string) => {
+  const data = await db.query.audioCache.findFirst({
+    where: and(
+      eq(audioCache.text, text),
+      eq(audioCache.languageCode, languageCode)
+    ),
+  });
+  return data;
+};
+
+/**
+ * 根据 lessonId 查询其所属课程的语言代码
+ * @param lessonId - 课程 ID
+ * @returns 返回语言代码 (例如 "cn", "es") 或 null
+ */
+export const getLanguageCodeByLessonId = async (lessonId: number) => {
+  const data = await db.query.lessons.findFirst({
+    where: eq(lessons.id, lessonId),
+    with: {
+      unit: {
+        with: {
+          course: {
+            columns: {
+              title: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!data?.unit?.course?.title) {
+    console.warn(`无法找到 lessonId: ${lessonId} 对应的课程语言。`);
+    return null;
+  }
+
+  const courseTitle = data.unit.course.title;
+  const langCode = courseTitleToLangCode[courseTitle];
+
+  if (!langCode) {
+    console.warn(`课程 "${courseTitle}" 没有对应的语言代码映射。`);
+    return null;
+  }
+
+  return langCode;
+};

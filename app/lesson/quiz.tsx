@@ -17,6 +17,7 @@ import Confetti from "react-confetti";
 import { useHeartsModal } from "@/store/use-hearts-modal";
 import { usePracticeModal } from "@/store/use-practice-modal";
 import { QuizLoading } from "@/components/loading-indicator";
+import { languageCode } from "@/constants";
 type Props = {
   initialPercentage: number;
   initialHearts: number;
@@ -28,6 +29,7 @@ type Props = {
   userSubscription: typeof userSubscription.$inferSelect & {
     isActive: boolean;
   };
+  languageCode: languageCode;
 };
 
 export const Quiz = ({
@@ -36,6 +38,7 @@ export const Quiz = ({
   initialLessonId,
   initialPercentage,
   userSubscription,
+  languageCode,
 }: Props) => {
   const { open: openHeartsModal } = useHeartsModal();
   const { open: openPracticeModal } = usePracticeModal();
@@ -238,6 +241,7 @@ export const Quiz = ({
                 selectedOption={selectedOption}
                 disabled={pending}
                 type={challenge.type}
+                languageCode={languageCode}
               />
             </div>
           </div>

@@ -1,6 +1,17 @@
 export const POINTS_TO_REFILL = 10;
 export const CHALLENGE_POINTS = 10;
 
+export type languageCode = "es" | "fr" | "hr" | "jp" | "cn";
+
+// 映射课程标题到语言代码
+export const courseTitleToLangCode: Record<string, "es" | "fr" | "jp" | "cn"> =
+  {
+    Spanish: "es",
+    French: "fr",
+    Japanese: "jp",
+    Chinese: "cn",
+  };
+
 export const SUBSCRIPTION_PLANS = {
   MONTHLY: {
     type: "MONTHLY" as const,

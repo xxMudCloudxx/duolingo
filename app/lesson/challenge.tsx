@@ -1,6 +1,7 @@
 import { challengeOptions, challenges } from "@/db/schema";
 import { cn } from "@/lib/utils";
 import { Card } from "./card";
+import { languageCode } from "@/constants";
 
 type Props = {
   options: (typeof challengeOptions.$inferSelect)[];
@@ -9,6 +10,7 @@ type Props = {
   selectedOption?: number;
   disabled?: boolean;
   type: (typeof challenges.$inferSelect)["type"];
+  languageCode: languageCode;
 };
 
 export const Challenge = ({
@@ -18,6 +20,7 @@ export const Challenge = ({
   selectedOption,
   disabled,
   type,
+  languageCode,
 }: Props) => {
   return (
     <div
@@ -41,6 +44,7 @@ export const Challenge = ({
           audioSrc={option.audioSrc}
           disabled={disabled}
           type={type}
+          languageCode={languageCode}
         />
       ))}
     </div>

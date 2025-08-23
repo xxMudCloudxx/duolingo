@@ -29,6 +29,7 @@
 - **🔄 状态管理** - 利用 Zustand 进行轻量、高效的客户端状态管理。
 - **📱 响应式和美观的 UI** - 基于 Tailwind CSS 和 Radix UI 构建，确保在所有设备上都有一致且美观的用户体验。
 - **📊 模块化设计** - 清晰的项目结构，将数据库、组件、路由和业务逻辑分离，易于维护和扩展。
+- **🎤 智能语音合成 (TTS)** - 集成 OpenAI TTS API，为学习内容提供高质量的多语言语音合成，支持中文、英文、西班牙语、法语、日语等多种语言，并具备智能缓存机制。
 
 ### 🎨 用户体验
 
@@ -59,6 +60,7 @@ Drizzle ORM 0.31       // 类型安全的 SQL ORM
 Neon PostgreSQL        // 无服务器数据库
 Clerk                  // 用户认证和管理
 React Admin            // 管理后台框架
+OpenAI TTS API         // 智能语音合成服务
 ```
 
 ## 📚 架构详解
@@ -75,6 +77,7 @@ React Admin            // 管理后台框架
 - **`userProgress`**: 跟踪用户当前的学习进度、红心和积分。
 - **`challengeProgress`**: 记录用户完成的挑战。
 - **`userSubscription`**: 管理用户的订阅状态。
+- **`audioCache`**: 缓存 TTS 生成的音频文件，避免重复生成相同内容的语音。
 
 <!-- end list -->
 
@@ -110,6 +113,15 @@ export const userProgress = pgTable("user_progress", {
   points: integer("points").notNull().default(0),
 });
 
+// 音频缓存表 (TTS)
+export const audioCache = pgTable("audio_cache", {
+  id: serial("id").primaryKey(),
+  text: text("text").notNull(),
+  languageCode: text("language_code").notNull(),
+  url: text("url").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 // ... 其他 schema 定义
 ```
 
@@ -136,10 +148,24 @@ duolingo/
 │   ├── queries.ts        # 数据库查询函数
 │   └── drizzle.ts        # 数据库连接配置
 ├── actions/              # Server Actions
+│   ├── challenge-progress.ts # 挑战进度管理
+│   ├── text-to-speech.ts # TTS 语音合成功能
+│   ├── user-progress.ts  # 用户学习进度管理
+│   └── user-subscription.ts # 用户订阅管理
 ├── store/                # Zustand 状态管理
 ├── lib/                  # 工具函数和配置
+├── scripts/              # 脚本工具
+│   ├── pregenerate_audio.ts # 音频预生成脚本
+│   ├── prod.ts           # 生产环境脚本
+│   ├── reset.ts          # 数据库重置脚本
+│   ├── seed.ts           # 数据库种子数据脚本
+│   └── seed_cn.ts        # 中文数据种子脚本
 └── public/               # 静态资源
-    ├── audio/            # 音频文件
+    ├── audio/            # TTS 生成的音频文件
+    │   ├── cn/           # 中文音频
+    │   ├── en/           # 英文音频
+    │   ├── es/           # 西班牙语音频
+    │   └── ...           # 其他语言音频
     ├── flags/            # 国家旗帜图标
     └── icons/            # SVG 图标
 ```
@@ -147,12 +173,14 @@ duolingo/
 ### 🔄 模块化设计
 
 **组件层次结构**
+
 - **页面组件** (`app/` 目录) - 负责数据获取和页面布局
 - **布局组件** (`components/`) - 提供可复用的 UI 结构
 - **UI 组件** (`components/ui/`) - 基于 Radix UI 的原子级组件
 - **业务组件** - 封装特定业务逻辑的复合组件
 
 **数据层分离**
+
 - **Schema 定义** (`db/schema.ts`) - 数据库表结构和关系
 - **查询函数** (`db/queries.ts`) - 封装复杂的数据库查询逻辑
 - **Server Actions** (`actions/`) - 处理数据变更操作
@@ -163,15 +191,16 @@ duolingo/
 ### 🎯 性能指标
 
 **构建优化结果**
+
 ```
 ┌ ○ (Static)   # 静态生成页面
-├ ● (SSG)      # 静态站点生成  
+├ ● (SSG)      # 静态站点生成
 ├ ƒ (Dynamic)  # 服务端渲染
 └ ○ (Static)   # 静态资源
 
 Route (app)                    Size     First Load JS
 ┌ ○ /                         142 B       87.2 kB
-├ ○ /_not-found               142 B       87.2 kB  
+├ ○ /_not-found               142 B       87.2 kB
 ├ ƒ /admin                    142 B       87.2 kB
 ├ ƒ /api/challenges           0 B         0 B
 ├ ƒ /learn                    142 B       87.2 kB
@@ -181,23 +210,27 @@ Route (app)                    Size     First Load JS
 ### 🚀 优化策略
 
 **1. Next.js 15 优化**
+
 - **App Router** - 利用新的路由系统实现更好的代码分割
 - **Server Components** - 减少客户端 JavaScript 包大小
 - **Streaming SSR** - 渐进式页面渲染，提升首屏加载速度
 - **Image Optimization** - 自动图片优化和懒加载
 
 **2. 数据库优化**
+
 - **连接池** - Neon 的自动连接池管理
 - **查询优化** - Drizzle ORM 的类型安全查询和索引优化
 - **缓存策略** - Next.js 数据缓存和 Drizzle 查询缓存
 
 **3. 资源优化**
+
 - **代码分割** - 动态导入和路由级别的代码分割
 - **Tree Shaking** - 移除未使用的代码
 - **压缩优化** - Gzip/Brotli 压缩和资源最小化
 - **CDN 加速** - 静态资源通过 Vercel Edge Network 分发
 
 **4. 用户体验优化**
+
 - **骨架屏** - 加载状态的优雅展示
 - **预加载** - 关键路由和资源的预加载
 - **离线支持** - PWA 特性和缓存策略
@@ -235,10 +268,13 @@ npm install
     ```env
     # Neon 数据库连接字符串
     DATABASE_URL="<your_neon_database_url>"
-    
+
     # Clerk 用户认证
     NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="<your_clerk_publishable_key>"
     CLERK_SECRET_KEY="<your_clerk_secret_key>"
+
+    # OpenAI TTS API (语音合成功能)
+    OPENAI_API_KEY="<your_openai_api_key>"
     ```
 
 ### 数据库设置
@@ -275,6 +311,9 @@ npm run db:push          # 推送 schema 到数据库
 npm run db:seed          # 运行种子数据
 npm run db:reset         # 重置数据库
 
+# TTS 音频管理
+npm run audio:generate # 预生成所有课程内容的音频文件
+
 # 代码质量
 npm run lint             # ESLint 检查
 ```
@@ -284,6 +323,68 @@ npm run lint             # ESLint 检查
 - **单一职责** - 每个组件和函数都力求只做一件事。
 - **类型安全** - 从数据库到前端 UI，全程使用 TypeScript 保证类型安全。
 - **代码规范** - 使用 ESLint 和 Prettier 保证代码风格统一。
+
+## 🎤 TTS 语音合成功能
+
+### 功能特性
+
+- **🌍 多语言支持** - 支持中文、英文、西班牙语、法语、日语等多种语言的高质量语音合成
+- **🎯 智能语音映射** - 为不同语言分配专属的 OpenAI 语音模型，提供更自然的发音体验
+- **⚡ 智能缓存机制** - 自动缓存生成的音频文件，避免重复生成，提升性能和用户体验
+- **🔄 动态生成** - 支持实时生成音频，用户点击即可听到语音
+- **📁 文件管理** - 按语言分类存储音频文件，便于管理和维护
+
+### 技术实现
+
+**核心组件：**
+
+- `actions/text-to-speech.ts` - TTS 核心功能实现
+- `scripts/pregenerate_audio.ts` - 批量音频预生成脚本
+- `db/schema.ts` - audioCache 表定义
+- `app/lesson/card.tsx` - 前端音频播放组件
+
+**工作流程：**
+
+1. 用户点击学习卡片时触发音频播放
+2. 系统首先检查 audioCache 表中是否存在缓存
+3. 如果缓存存在，直接播放缓存的音频文件
+4. 如果缓存不存在，调用 OpenAI TTS API 生成音频
+5. 将生成的音频保存到 `/public/audio/{languageCode}/` 目录
+6. 更新数据库缓存记录，供下次使用
+
+**语音模型映射：**
+
+```typescript
+const languageVoiceMap = {
+  es: "nova", // 西班牙语
+  fr: "echo", // 法语
+  jp: "shimmer", // 日语
+  cn: "onyx", // 中文
+  hr: "fable", // 克罗地亚语
+};
+```
+
+### 使用方式
+
+**环境配置：**
+
+```bash
+# 设置 OpenAI API 密钥
+OPENAI_API_KEY="your_openai_api_key"
+```
+
+**预生成音频：**
+
+```bash
+# 为所有课程内容预生成音频文件
+npm run audio:generate
+```
+
+**实时生成：**
+
+- 用户在学习过程中点击任意文本卡片
+- 系统自动检测语言并生成对应的语音
+- 音频文件自动缓存，提升后续访问速度
 
 ## 📄 许可证
 

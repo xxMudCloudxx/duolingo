@@ -1,6 +1,7 @@
 import { getLesson, getUserProgress, getUserSubscription } from "@/db/queries";
 import { redirect } from "next/navigation";
 import { Quiz } from "../quiz";
+import { courseTitleToLangCode } from "@/constants";
 type Props = {
   params: Promise<{
     lessonId: number;
@@ -27,6 +28,8 @@ const LessonIdPage = async ({ params }: Props) => {
     (lesson.challenges.filter((challenge) => challenge.completed).length /
       lesson.challenges.length) *
     100;
+  const courseTitle = lesson.unit.course.title;
+  const languageCode = courseTitleToLangCode[courseTitle];
 
   return (
     <Quiz
@@ -35,6 +38,7 @@ const LessonIdPage = async ({ params }: Props) => {
       initialHearts={userProgress.hearts}
       initialPercentage={initialPercentage}
       userSubscription={userSubscription!}
+      languageCode={languageCode}
     />
   );
 };

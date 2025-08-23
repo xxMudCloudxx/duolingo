@@ -1,8 +1,11 @@
+import { generateAndCacheAudio } from "@/actions/text-to-speech";
+import { languageCode } from "@/constants";
 import { challenges } from "@/db/schema";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
-import { useCallback } from "react";
+import { useCallback, useState, useTransition } from "react";
 import { useAudio, useKey } from "react-use";
+import { toast } from "sonner";
 
 type Props = {
   id: number;
@@ -15,6 +18,7 @@ type Props = {
   disabled?: boolean;
   status?: "correct" | "wrong" | "none";
   type: (typeof challenges.$inferSelect)["type"];
+  languageCode: languageCode;
 };
 
 export const Card = ({
@@ -27,15 +31,48 @@ export const Card = ({
   disabled,
   status,
   type,
+  languageCode,
 }: Props) => {
-  const [audio, , controls] = useAudio({ src: audioSrc || "" });
+  const [isPending, startTransition] = useTransition();
+  const [dynamicAudioSrc, setDynamicAudioSrc] = useState<string | null>(null);
+
+  const finalAudioSrc = audioSrc || dynamicAudioSrc;
+  const [audio, , controls] = useAudio({ src: finalAudioSrc || "" });
 
   const handleClick = useCallback(() => {
-    if (disabled) return;
+    console.log(audioSrc, finalAudioSrc, dynamicAudioSrc);
+    if (disabled || isPending) return;
 
-    controls.play();
+    if (finalAudioSrc) {
+      controls.play();
+    } else {
+      startTransition(() => {
+        generateAndCacheAudio(text, languageCode)
+          .then((result) => {
+            if (result.success && result.url) {
+              setDynamicAudioSrc(result.url);
+              const newAudio = new Audio(result.url);
+              newAudio.play();
+            } else {
+              toast.error(result.error);
+            }
+          })
+          .catch(() => toast.error("something went wrong"));
+      });
+    }
+
     onClick();
-  }, [disabled, onClick, controls]);
+  }, [
+    disabled,
+    audioSrc,
+    dynamicAudioSrc,
+    onClick,
+    controls,
+    finalAudioSrc,
+    languageCode,
+    text,
+    isPending,
+  ]);
 
   useKey(shortcut, handleClick, {}, [handleClick]);
 

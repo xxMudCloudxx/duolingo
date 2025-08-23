@@ -98,6 +98,15 @@ export const userSubscription = pgTable("user_subscription", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
+
+export const audioCache = pgTable("audio_cache", {
+  id: serial("id").primaryKey(),
+  text: text("text").notNull(),
+  languageCode: text("language_code").notNull(),
+  url: text("url").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 export const coursesRelations = relations(courses, ({ many }) => ({
   userProgress: many(userProgress),
   units: many(units),
