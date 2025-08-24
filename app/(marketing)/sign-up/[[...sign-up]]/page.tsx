@@ -86,7 +86,7 @@ export default function SignUpPage() {
                       className="flex justify-center content-center"
                       asChild
                     >
-                      <Link href="/sign-up">
+                      <Link href="/sign-in">
                         Already have an account? Sign in
                       </Link>
                     </Button>
