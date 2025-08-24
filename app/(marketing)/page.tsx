@@ -1,12 +1,5 @@
 import { Button } from "@/components/ui/button";
-import {
-  ClerkLoaded,
-  ClerkLoading,
-  SignedIn,
-  SignedOut,
-  SignInButton,
-  SignUpButton,
-} from "@clerk/nextjs";
+import { ClerkLoaded, ClerkLoading, SignedIn, SignedOut } from "@clerk/nextjs";
 import { Loader } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -27,28 +20,23 @@ export default function Home() {
           </ClerkLoading>
           <ClerkLoaded>
             <SignedOut>
-              <SignUpButton
-                mode="modal"
-                forceRedirectUrl={"/learn"}
-                signInForceRedirectUrl={"/learn"}
+              <Button
+                size={"lg"}
+                variant={"secondary"}
+                className="w-full"
+                asChild
               >
-                <Button size={"lg"} variant={"secondary"} className="w-full">
-                  Get Started
-                </Button>
-              </SignUpButton>
-              <SignInButton
-                mode="modal"
-                forceRedirectUrl={"/learn"}
-                signUpForceRedirectUrl={"/learn"}
+                <Link href="/sign-up">Get Started</Link>
+              </Button>
+
+              <Button
+                size={"lg"}
+                variant={"primaryOutline"}
+                className="w-full"
+                asChild
               >
-                <Button
-                  size={"lg"}
-                  variant={"primaryOutline"}
-                  className="w-full"
-                >
-                  I already have an account
-                </Button>
-              </SignInButton>
+                <Link href={"/sign-in"}>I already have an account</Link>
+              </Button>
             </SignedOut>
             <SignedIn>
               <Button

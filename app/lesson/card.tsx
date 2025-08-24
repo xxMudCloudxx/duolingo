@@ -40,7 +40,6 @@ export const Card = ({
   const [audio, , controls] = useAudio({ src: finalAudioSrc || "" });
 
   const handleClick = useCallback(() => {
-    console.log(audioSrc, finalAudioSrc, dynamicAudioSrc);
     if (disabled || isPending) return;
 
     if (finalAudioSrc) {
@@ -64,8 +63,6 @@ export const Card = ({
     onClick();
   }, [
     disabled,
-    audioSrc,
-    dynamicAudioSrc,
     onClick,
     controls,
     finalAudioSrc,
