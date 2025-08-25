@@ -51,6 +51,7 @@ export const updateChallengeOptionsAudioSrc = async (
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
   timeout: 30 * 1000, // 设置超时为 30 秒 (默认是 10 秒)
+  // 调用云雾api平台的openai接口
   baseURL: "https://api.wlai.vip/v1",
 });
 

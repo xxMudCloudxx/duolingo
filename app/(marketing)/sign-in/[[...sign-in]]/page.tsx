@@ -24,7 +24,7 @@ export default function SignInPage() {
             <Loader className="h-5 w-5 text-muted-foreground animate-spin" />
           </ClerkLoading>
           <ClerkLoaded>
-            <div className="h-full lg:flex flex-col items-center justify-center px-4 py-4 min-w-[410px] border border-slate-200 rounded-2xl">
+            <div className="h-full lg:flex flex-col items-center justify-center px-4 py-4 sm:min-w-[410px]  border border-slate-200 rounded-2xl">
               <div className=" w-full">
                 <SignIn.Root>
                   {/* Start Step: 用户输入邮箱或选择社交登录 */}
