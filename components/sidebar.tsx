@@ -3,7 +3,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { SidebarItem } from "./siderbar-item";
 import { ClerkLoaded, ClerkLoading, UserButton } from "@clerk/nextjs";
-import { Loader } from "lucide-react";
+import { DotIcon, Loader } from "lucide-react";
+import { UserProfile } from "@clerk/clerk-react";
+import UserProfilePage from "@/app/(marketing)/user-profile/[[...user-profile]]/page";
 
 type Props = {
   className?: string;
@@ -44,7 +46,24 @@ export const Sidebar = ({ className }: Props) => {
           <Loader className="h-5 w-5 text-muted-foreground animate-spin" />
         </ClerkLoading>
         <ClerkLoaded>
-          <UserButton afterSignOutUrl="/" />
+          <UserButton
+            userProfileUrl="/user-profile"
+            appearance={{
+              elements: {
+                userButtonPopoverFooter: "hidden!",
+                userButtonPopoverMain: "w-[298px]!",
+                userButtonPopoverCard: "w-[298px]!",
+              },
+            }}
+          >
+            <UserButton.UserProfilePage
+              label="Custom Page"
+              url="/usr-profile"
+              labelIcon={<DotIcon />}
+            >
+              <UserProfilePage />
+            </UserButton.UserProfilePage>
+          </UserButton>
         </ClerkLoaded>
       </div>
     </div>

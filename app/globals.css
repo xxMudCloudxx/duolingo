@@ -1,12 +1,19 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-
 @custom-variant dark (&:is(.dark *));
 
 html,
 body,
 :root {
   @apply h-full;
+}
+.cl-userProfile-root .cl-navbar > div {
+  background: none !important;
+  mask-image: none !important;
+}
+
+.cl-userProfile-root .cl-navbar > *:nth-child(3) {
+  display: none;
 }
 
 @theme inline {

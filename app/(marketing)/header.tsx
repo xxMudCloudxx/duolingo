@@ -25,7 +25,15 @@ export const Header = () => {
         </ClerkLoading>
         <ClerkLoaded>
           <SignedIn>
-            <UserButton />
+            <UserButton
+              appearance={{
+                elements: {
+                  userButtonPopoverFooter: "hidden! w-[100px]",
+                  userButtonPopoverMain: "w-[298px]!",
+                  userButtonPopoverCard: "w-[298px]!",
+                },
+              }}
+            />
           </SignedIn>
           <SignedOut>
             <SignInButton
