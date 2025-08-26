@@ -10,6 +10,18 @@ export function absoluteUrl(path: string) {
   return `${process.env.NEXT_PUBLIC_APP_URL}${path}`;
 }
 
+// 格式化剩余时间的辅助函数
+export const formatTimeLeft = (seconds: number) => {
+  if (seconds < 60) return "< 1m";
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+
+  if (hours > 0) {
+    return `${hours} hour${hours > 1 ? "s" : ""} left`;
+  }
+  return `${minutes} minute${minutes > 1 ? "s" : ""} left`;
+};
+
 // 返回 'YYYY-MM-DD' 格式.
 export const getTodayDateString = () => new Date().toISOString().split("T")[0];
 

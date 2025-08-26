@@ -6,7 +6,7 @@ import Image from "next/image";
 import { redirect } from "next/navigation";
 import { Items } from "./items";
 import { Promo } from "@/components/promo";
-import { Quests } from "@/components/quests";
+import { Quests } from "@/components/quests-client";
 
 const ShopPage = async () => {
   const userProgressPromiseData = getUserProgress();

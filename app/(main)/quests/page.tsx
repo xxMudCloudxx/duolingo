@@ -42,10 +42,11 @@ const QuestsPage = async () => {
         <div className="w-full flex flex-col items-center">
           <Image src="/icons/quests.svg" alt="Quests" height={90} width={90} />
           <h1 className="text-center font-bold text-neutral-800 text-2xl my-6">
-            Quests
+            Daily Quests
           </h1>
-          <p className="text-muted-foreground text-center text-lg mb-6">
-            Complete quests by earning points.
+          <p className="text-muted-foreground text-center text-lg mb-3">
+            Complete quests by earning points in lessons. <br />
+            Practice mode does not count and quests refresh daily.
           </p>
           <QuestsClient dailyPoints={dailyProgress?.points || 0} />
         </div>

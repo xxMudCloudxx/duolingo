@@ -46,7 +46,7 @@ const UserProgressSection = async () => {
         hasActiveSubscription={isPro}
       />
       {!isPro && <Promo />}
-      <Quests points={userProgress.points} />
+      <Quests />
     </StickyWrapper>
   );
 };

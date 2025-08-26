@@ -15,9 +15,8 @@ import {
   userProgress,
 } from "@/db/schema";
 import { redis } from "@/lib/redis";
-import { getSecondsUntilNext5AM } from "@/lib/utils";
+import { getSecondsUntilNext5AM, getTodayDateString } from "@/lib/utils";
 import { auth } from "@clerk/nextjs/server";
-import { format, toZonedTime } from "date-fns-tz";
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
@@ -118,7 +117,7 @@ export const upsertChallengeProgress = async (
   });
 
   const ttlInSeconds = getSecondsUntilNext5AM(timezone);
-  const dateStr = format(toZonedTime(new Date(), timezone), "yyyy-MM-dd");
+  const dateStr = getTodayDateString();
   const dailyProgressKey = `daily_progress:${userId}:${dateStr}`;
   let currentDailyPoints = 0;
 
