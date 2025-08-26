@@ -175,7 +175,9 @@ export const Quiz = ({
     }
     if (correctOption.id === selectedOption) {
       startTransition(() => {
-        upsertChallengeProgress(challenge.id)
+        // 获取用户的时区字符串, 例如 "Asia/Tokyo", "America/New_York"
+        const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        upsertChallengeProgress(challenge.id, userTimezone)
           .then((response) => {
             if (response?.error === "hearts") {
               openHeartsModal();

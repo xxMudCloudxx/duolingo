@@ -1,10 +1,10 @@
+"use client";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import Link from "next/link";
 import { SidebarItem } from "./siderbar-item";
 import { ClerkLoaded, ClerkLoading, UserButton } from "@clerk/nextjs";
 import { DotIcon, Loader } from "lucide-react";
-import { UserProfile } from "@clerk/clerk-react";
 import UserProfilePage from "@/app/(marketing)/user-profile/[[...user-profile]]/page";
 
 type Props = {
@@ -58,7 +58,7 @@ export const Sidebar = ({ className }: Props) => {
           >
             <UserButton.UserProfilePage
               label="Custom Page"
-              url="/usr-profile"
+              url="/user-profile"
               labelIcon={<DotIcon />}
             >
               <UserProfilePage />

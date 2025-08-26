@@ -20,8 +20,19 @@ const main = async () => {
       db.delete(schema.courses),
       db.delete(schema.challengeOptions),
       db.delete(schema.userSubscription),
+      db.delete(schema.quests),
+      db.delete(schema.userDailyQuests),
     ]);
 
+    const questsData = [
+      { title: "Earn 20 XP", value: 20 },
+      { title: "Earn 50 XP", value: 50 },
+      { title: "Earn 100 XP", value: 100 },
+      { title: "Earn 500 XP", value: 500 },
+      { title: "Earn 1000 XP", value: 1000 },
+    ];
+
+    await db.insert(schema.quests).values(questsData);
     // Insert courses
     const courses = await db
       .insert(schema.courses)

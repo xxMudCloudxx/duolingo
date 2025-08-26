@@ -15,6 +15,11 @@ export const courses = pgTable("courses", {
   imgSrc: text("image_src").notNull(),
 });
 
+export const coursesRelations = relations(courses, ({ many }) => ({
+  userProgress: many(userProgress),
+  units: many(units),
+}));
+
 export const userProgress = pgTable("user_progress", {
   userId: text("user_id").primaryKey(),
   userName: text("user_name").notNull().default("User"),
@@ -25,6 +30,13 @@ export const userProgress = pgTable("user_progress", {
   hearts: integer("hearts").notNull().default(5),
   points: integer("points").notNull().default(0),
 });
+
+export const userProgressRelations = relations(userProgress, ({ one }) => ({
+  activeCourse: one(courses, {
+    fields: [userProgress.activeCourseId],
+    references: [courses.id],
+  }),
+}));
 
 export const units = pgTable("units", {
   id: serial("id").primaryKey(),
@@ -38,6 +50,14 @@ export const units = pgTable("units", {
   order: integer("order").notNull(),
 });
 
+export const unitsRelations = relations(units, ({ one, many }) => ({
+  course: one(courses, {
+    fields: [units.courseId],
+    references: [courses.id],
+  }),
+  lessons: many(lessons),
+}));
+
 export const lessons = pgTable("lessons", {
   id: serial("id").primaryKey(),
   title: text("title").notNull(),
@@ -48,6 +68,14 @@ export const lessons = pgTable("lessons", {
     .notNull(),
   order: integer("order").notNull(),
 });
+
+export const lessonsRelations = relations(lessons, ({ one, many }) => ({
+  unit: one(units, {
+    fields: [lessons.unitId],
+    references: [units.id],
+  }),
+  challenges: many(challenges),
+}));
 
 export const challengesEnum = pgEnum("type", ["SELECT", "ASSIST"]);
 
@@ -62,6 +90,15 @@ export const challenges = pgTable("challenges", {
   question: text("question").notNull(),
   order: integer("order").notNull(),
 });
+
+export const challengesRelations = relations(challenges, ({ one, many }) => ({
+  lessons: one(lessons, {
+    fields: [challenges.lessonId],
+    references: [lessons.id],
+  }),
+  challengeOptions: many(challengeOptions),
+  challengeProgress: many(challengeProgress),
+}));
 
 export const challengeOptions = pgTable("challenge_options", {
   id: serial("id").primaryKey(),
@@ -107,43 +144,6 @@ export const audioCache = pgTable("audio_cache", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
-export const coursesRelations = relations(courses, ({ many }) => ({
-  userProgress: many(userProgress),
-  units: many(units),
-}));
-
-export const userProgressRelations = relations(userProgress, ({ one }) => ({
-  activeCourse: one(courses, {
-    fields: [userProgress.activeCourseId],
-    references: [courses.id],
-  }),
-}));
-
-export const unitsRelations = relations(units, ({ one, many }) => ({
-  course: one(courses, {
-    fields: [units.courseId],
-    references: [courses.id],
-  }),
-  lessons: many(lessons),
-}));
-
-export const lessonsRelations = relations(lessons, ({ one, many }) => ({
-  unit: one(units, {
-    fields: [lessons.unitId],
-    references: [units.id],
-  }),
-  challenges: many(challenges),
-}));
-
-export const challengesRelations = relations(challenges, ({ one, many }) => ({
-  lessons: one(lessons, {
-    fields: [challenges.lessonId],
-    references: [lessons.id],
-  }),
-  challengeOptions: many(challengeOptions),
-  challengeProgress: many(challengeProgress),
-}));
-
 export const challengesOptionsRelations = relations(
   challengeOptions,
   ({ one }) => ({
@@ -160,6 +160,36 @@ export const challengesProgressRelations = relations(
     challenge: one(challenges, {
       fields: [challengeProgress.challengeId],
       references: [challenges.id],
+    }),
+  })
+);
+
+export const quests = pgTable("quests", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  value: integer("value").notNull(),
+});
+
+export const questsRelations = relations(quests, ({ many }) => ({
+  userDailyQuests: many(userDailyQuests),
+}));
+
+export const userDailyQuests = pgTable("user_daily_quests", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  questId: integer("quest_id")
+    .references(() => quests.id, { onDelete: "cascade" })
+    .notNull(),
+  completed: boolean("completed").notNull().default(false),
+  assignedAt: timestamp("assigned_at").notNull().defaultNow(),
+});
+
+export const userDailyQuestsRelations = relations(
+  userDailyQuests,
+  ({ one }) => ({
+    quest: one(quests, {
+      fields: [userDailyQuests.questId],
+      references: [quests.id],
     }),
   })
 );

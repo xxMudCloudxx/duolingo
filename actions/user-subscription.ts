@@ -7,6 +7,7 @@ import { auth } from "@clerk/nextjs/server";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { SUBSCRIPTION_PLANS } from "@/constants";
+import { redis } from "@/lib/redis";
 
 export const purchaseSubscription = async (
   planType: keyof typeof SUBSCRIPTION_PLANS
@@ -74,6 +75,13 @@ export const purchaseSubscription = async (
         points: currentUserProgress.points - plan.points,
       })
       .where(eq(userProgress.userId, currentUserProgress.userId));
+
+    // 清除 user_progress 的缓存
+    try {
+      await redis.del(`user_progress:${userId}`);
+    } catch (e) {
+      console.error("Redis DEL Error (user_progress):", e);
+    }
 
     revalidatePath("/shop");
     revalidatePath("/learn");

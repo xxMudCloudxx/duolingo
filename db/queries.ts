@@ -1,17 +1,21 @@
 import { cache } from "react";
 import db from "./drizzle";
 import { auth } from "@clerk/nextjs/server";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import {
   audioCache,
   challengeProgress,
   courses,
   lessons,
   units,
+  userDailyQuests,
   userProgress,
   userSubscription,
 } from "./schema";
 import { courseTitleToLangCode } from "@/constants";
+import { redis } from "@/lib/redis";
+import { getSecondsUntilNext5AM, getTodayDateString } from "@/lib/utils";
+import { format, toZonedTime } from "date-fns-tz";
 
 export const getUnits = cache(async () => {
   const userProgress = await getUserProgress();
@@ -83,12 +87,37 @@ export const getUserProgress = cache(async () => {
     return null;
   }
 
+  const cacheKey = `user_progress:${userId}`;
+
+  try {
+    const cachedProgress = await redis.get(cacheKey);
+    if (cachedProgress) {
+      const data = JSON.parse(cachedProgress) as
+        | (typeof userProgress.$inferSelect & {
+            activeCourse: typeof courses.$inferSelect;
+          })
+        | undefined;
+      return data;
+    }
+  } catch (e) {
+    console.error("Redis GET Error (getUserProgress):", e);
+  }
+
   const data = await db.query.userProgress.findFirst({
     where: eq(userProgress.userId, userId),
     with: {
       activeCourse: true,
     },
   });
+
+  try {
+    // 设置一个相对较短的过期时间，例如 10 分钟 (600秒)
+    // 因为用户进度可能会频繁变化
+    await redis.set(cacheKey, JSON.stringify(data), "EX", 600);
+  } catch (e) {
+    console.error("Redis SET Error (getUserProgress):", e);
+  }
+
   return data;
 });
 
@@ -267,6 +296,27 @@ export const getTopTenUsers = cache(async () => {
     return [];
   }
 
+  const cacheKey = "leaderboard";
+
+  // 优先从 Redis 缓存中获取排行榜数据
+  try {
+    const cachedLeaderboard = await redis.get(cacheKey);
+    if (cachedLeaderboard) {
+      // 如果命中缓存，直接解析并返回数据
+      const data = JSON.parse(cachedLeaderboard);
+      return data as {
+        userId: string;
+        userName: string;
+        userImgSrc: string;
+        points: number;
+      };
+    }
+  } catch (error) {
+    console.error("Redis GET error (leaderboard):", error);
+    // 如果 Redis 出错，降级处理，继续从数据库查询
+  }
+
+  // 如果缓存未命中，则从数据库查询
   const data = await db.query.userProgress.findMany({
     orderBy: (userProgress, { desc }) => [desc(userProgress.points)],
     limit: 10,
@@ -277,6 +327,15 @@ export const getTopTenUsers = cache(async () => {
       points: true,
     },
   });
+
+  // 3. 将从数据库获取的结果存入 Redis 缓存，并设置过期时间
+  try {
+    // 设置一个相对较短的过期时间，例如 10 分钟 (600 秒)
+    const ttl = 60 * 10;
+    await redis.set(cacheKey, JSON.stringify(data), "EX", ttl);
+  } catch (error) {
+    console.error("Redis SET error (leaderboard):", error);
+  }
 
   return data;
 });
@@ -328,3 +387,118 @@ export const getLanguageCodeByLessonId = async (lessonId: number) => {
 
   return langCode;
 };
+
+export const getQuests = cache(async (timeZone: string) => {
+  const { userId } = await auth();
+  if (!userId) return [];
+
+  // 如果客户端未能提供时区，则使用一个安全的默认值
+  if (!timeZone) {
+    console.warn("getQuests: Timezone not provided, falling back to UTC.");
+    timeZone = "Etc/UTC";
+  }
+
+  const dateStr = format(toZonedTime(new Date(), timeZone), "yyyy-MM-dd");
+  const cacheKey = `quests:${userId}:${dateStr}`;
+
+  // 从Redis读取
+  try {
+    const cachedQuests = await redis.get(cacheKey);
+    if (cachedQuests) {
+      const quests = JSON.parse(cachedQuests);
+      quests.sort(
+        (a: { value: number }, b: { value: number }) => a.value - b.value
+      );
+      return quests as (typeof quests.$inferSelect & {
+        completed: boolean;
+      })[];
+    }
+  } catch (e) {
+    console.error("Redis GET Error:", e);
+  }
+
+  // 未命中，查询数据库
+  const nowInUserTz = new Date();
+  const startOfDayInUserTz = new Date(nowInUserTz);
+  startOfDayInUserTz.setHours(5, 0, 0, 0);
+
+  // 如果当前时间早于今天的凌晨5点，说明“今天”的任务是从“昨天”的凌晨5点开始的
+  if (nowInUserTz.getTime() < startOfDayInUserTz.getTime()) {
+    startOfDayInUserTz.setDate(startOfDayInUserTz.getDate() - 1);
+  }
+
+  // 将用户时区的“今日起始时间”转换为 UTC 时间，以便与数据库中的 UTC 时间戳进行比较
+  const startOfDayUTC = toZonedTime(startOfDayInUserTz, timeZone);
+
+  const dbQuests = await db.query.userDailyQuests.findMany({
+    where: and(
+      eq(userDailyQuests.userId, userId),
+      sql`${userDailyQuests.assignedAt} >= ${startOfDayUTC}`
+    ),
+    with: { quest: true },
+  });
+
+  let questsToReturn = [];
+  if (dbQuests.length > 0) {
+    questsToReturn = dbQuests.map((dq) => ({
+      ...dq.quest,
+      completed: dq.completed,
+    }));
+  } else {
+    // 数据库没有，则创建任务
+    const allQuests = await db.query.quests.findMany();
+
+    // const selectedQuests = allQuests
+    //   .sort(() => 0.5 - Math.random())
+    //   .slice(0, 3);
+    const selectedQuests = allQuests; // TODO: 目前任务少，先返回所有
+
+    // 将挑选出的任务插入到 user_daily_quests 表中
+    if (selectedQuests.length > 0) {
+      await db.insert(userDailyQuests).values(
+        selectedQuests.map((quest) => ({
+          userId,
+          questId: quest.id,
+        }))
+      );
+    }
+    questsToReturn = selectedQuests.map((q) => ({ ...q, completed: false }));
+  }
+
+  questsToReturn.sort((a, b) => a.value - b.value);
+
+  try {
+    const ttlInSeconds = getSecondsUntilNext5AM(timeZone);
+    await redis.set(
+      cacheKey,
+      JSON.stringify(questsToReturn),
+      "EX",
+      ttlInSeconds
+    );
+  } catch (e) {
+    console.error("Redis SET Error:", e);
+  }
+
+  return questsToReturn;
+});
+
+/**
+ * 从 Redis 获取用户今日获得的分数
+ */
+export const getDailyProgress = cache(async () => {
+  const { userId } = await auth();
+  if (!userId) return null;
+
+  const dateStr = getTodayDateString();
+  //  为用户的每日进度创建一个唯一的 Redis键, 例如: "daily_progress:user_123:2025-08-27"
+  const dailyProgressKey = `daily_progress:${userId}:${dateStr}`;
+
+  try {
+    const dailyPoints = await redis.get(dailyProgressKey);
+    // 如果键不存在或获取失败，`dailyPoints` 会是 null, Number(null) 结果为 0
+    return { points: Number(dailyPoints) || 0 };
+  } catch (e) {
+    console.error("Redis GET Error (getDailyProgress):", e);
+    return { points: 0 }; // 在出错时返回一个安全的默认值
+  }
+});
