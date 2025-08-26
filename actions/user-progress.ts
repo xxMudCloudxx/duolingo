@@ -8,6 +8,7 @@ import {
   getUserSubscription,
 } from "@/db/queries";
 import { challengeProgress, challenges, userProgress } from "@/db/schema";
+import { redis } from "@/lib/redis";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -30,7 +31,7 @@ export const upsertUserProgress = async (courseId: number) => {
   if (!course.units.length || !course.units[0].lessons.length) {
     throw new Error("Course is empty");
   }
-
+  const cacheKey = `user_progress:${userId}`; // 定义缓存键
   const existingUserProgress = await getUserProgress();
 
   if (existingUserProgress) {
@@ -39,6 +40,14 @@ export const upsertUserProgress = async (courseId: number) => {
       userName: user.firstName || "User",
       userImgSrc: user.imageUrl || "/icons/mascot.svg",
     });
+
+    // --- 添加缓存清除逻辑 ---
+    try {
+      await redis.del(cacheKey);
+      console.log("User progress cache invalidated after update.");
+    } catch (e) {
+      console.error("Redis DEL Error (user_progress):", e);
+    }
     revalidatePath("/courses");
     revalidatePath("/learn");
     redirect("/learn");
@@ -51,6 +60,13 @@ export const upsertUserProgress = async (courseId: number) => {
     userImgSrc: user.imageUrl || "/icons/mascot.svg",
   });
 
+  // --- 添加缓存清除逻辑 ---
+  try {
+    await redis.del(cacheKey);
+    console.log("User progress cache invalidated after update.");
+  } catch (e) {
+    console.error("Redis DEL Error (user_progress):", e);
+  }
   revalidatePath("/courses");
   revalidatePath("/learn");
   redirect("/learn");
@@ -106,6 +122,12 @@ export const reduceHearts = async (challengeId: number) => {
     })
     .where(eq(userProgress.userId, userId));
 
+  // 清除 user_progress 的缓存
+  try {
+    await redis.del(`user_progress:${userId}`);
+  } catch (e) {
+    console.error("Redis DEL Error (user_progress):", e);
+  }
   revalidatePath("/learn");
   revalidatePath("/lesson");
   revalidatePath("/quests");
@@ -114,6 +136,11 @@ export const reduceHearts = async (challengeId: number) => {
 };
 
 export const refillHearts = async () => {
+  const { userId } = await auth();
+
+  if (!userId) {
+    throw new Error("Unauthorized");
+  }
   const currentUserProgress = await getUserProgress();
 
   if (!currentUserProgress) {
@@ -136,6 +163,12 @@ export const refillHearts = async () => {
     })
     .where(eq(userProgress.userId, currentUserProgress.userId));
 
+  // 清除 user_progress 的缓存
+  try {
+    await redis.del(`user_progress:${userId}`);
+  } catch (e) {
+    console.error("Redis DEL Error (user_progress):", e);
+  }
   revalidatePath("/learn");
   revalidatePath("/shop");
   revalidatePath("/quests");
