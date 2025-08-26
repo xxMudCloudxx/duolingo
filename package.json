@@ -13,7 +13,8 @@
     "db:seed_cn": "tsx scripts/seed_cn.ts",
     "db:reset": "tsx scripts/reset.ts",
     "db:prod": "tsx scripts/prod.ts",
-    "audio:generate": "tsx scripts/pregenerate_audio.ts"
+    "audio:generate": "tsx scripts/pregenerate_audio.ts",
+    "quest:cleanup": "tsx scripts/cleanup-quests.ts"
   },
   "dependencies": {
     "@clerk/clerk-react": "^5.43.1",
