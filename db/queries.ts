@@ -309,7 +309,7 @@ export const getTopTenUsers = cache(async () => {
         userName: string;
         userImgSrc: string;
         points: number;
-      };
+      }[];
     }
   } catch (error) {
     console.error("Redis GET error (leaderboard):", error);
