@@ -8,12 +8,10 @@ import { toast } from "sonner";
 import { formatTimeLeft, getSecondsUntilNext5AM } from "@/lib/utils";
 import { Button } from "./ui/button";
 import { Progress } from "./ui/progress";
-import { quests as questsSchema } from "@/db/schema";
 import { getQuestsAction } from "@/actions/quests";
 
 // 定义 Quest 类型
-type Quest = typeof questsSchema.$inferSelect & { completed: boolean };
-
+type Quest = { id: number; title: string; value: number; completed: boolean };
 type Props = {
   points: number; // 从父组件接收的“今日分数”
 };
@@ -47,7 +45,6 @@ export const QuestsClient = ({ points }: Props) => {
     // 组件卸载时清除定时器
     return () => clearInterval(timerInterval);
   }, []); // 空依赖数组确保只在组件加载时运行一次
-
   return (
     <div className="border-2 rounded-xl p-4 space-y-4">
       <div className="flex items-center justify-between w-full">
@@ -76,7 +73,8 @@ export const QuestsClient = ({ points }: Props) => {
       ) : (
         <ul className="w-full space-y-4">
           {quests.map((quest) => {
-            const progress = Math.min((points / quest.value) * 100, 100);
+            const questValue = Math.max(quest.value, 1);
+            const progress = Math.min((points / questValue) * 100, 100);
 
             return (
               <div

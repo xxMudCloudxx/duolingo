@@ -7,6 +7,7 @@ import {
   challengeProgress,
   courses,
   lessons,
+  quests,
   units,
   userDailyQuests,
   userProgress,
@@ -15,7 +16,7 @@ import {
 import { courseTitleToLangCode } from "@/constants";
 import { redis } from "@/lib/redis";
 import { getSecondsUntilNext5AM, getTodayDateString } from "@/lib/utils";
-import { format, toZonedTime } from "date-fns-tz";
+import { format, toZonedTime, fromZonedTime } from "date-fns-tz";
 
 export const getUnits = cache(async () => {
   const userProgress = await getUserProgress();
@@ -405,11 +406,11 @@ export const getQuests = cache(async (timeZone: string) => {
   try {
     const cachedQuests = await redis.get(cacheKey);
     if (cachedQuests) {
-      const quests = JSON.parse(cachedQuests);
-      quests.sort(
+      const questsData = JSON.parse(cachedQuests);
+      questsData.sort(
         (a: { value: number }, b: { value: number }) => a.value - b.value
       );
-      return quests as (typeof quests.$inferSelect & {
+      return questsData as (typeof quests.$inferSelect & {
         completed: boolean;
       })[];
     }
@@ -418,8 +419,10 @@ export const getQuests = cache(async (timeZone: string) => {
   }
 
   // 未命中，查询数据库
-  const nowInUserTz = new Date();
-  const startOfDayInUserTz = new Date(nowInUserTz);
+  const now = new Date();
+  const nowInUserTz = toZonedTime(now, timeZone);
+
+  const startOfDayInUserTz = new Date(nowInUserTz.getTime());
   startOfDayInUserTz.setHours(5, 0, 0, 0);
 
   // 如果当前时间早于今天的凌晨5点，说明“今天”的任务是从“昨天”的凌晨5点开始的
@@ -428,7 +431,7 @@ export const getQuests = cache(async (timeZone: string) => {
   }
 
   // 将用户时区的“今日起始时间”转换为 UTC 时间，以便与数据库中的 UTC 时间戳进行比较
-  const startOfDayUTC = toZonedTime(startOfDayInUserTz, timeZone);
+  const startOfDayUTC = fromZonedTime(startOfDayInUserTz, timeZone);
 
   const dbQuests = await db.query.userDailyQuests.findMany({
     where: and(

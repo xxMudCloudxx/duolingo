@@ -130,30 +130,6 @@ export const audioCache = pgTable("audio_cache", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
-// 每日任务表
-export const dailyQuests = pgTable("daily_quests", {
-  id: serial("id").primaryKey(),
-  title: text("title").notNull(),
-  description: text("description").notNull(),
-  type: text("type").notNull(), // 'lessons_completed', 'points_earned', 'login_streak'
-  targetValue: integer("target_value").notNull(),
-  reward: integer("reward").notNull(),
-  isActive: boolean("is_active").notNull().default(true),
-});
-
-// 用户任务进度表
-export const userQuestProgress = pgTable("user_quest_progress", {
-  id: serial("id").primaryKey(),
-  userId: text("user_id").notNull(),
-  questId: integer("quest_id").references(() => dailyQuests.id, {
-    onDelete: "cascade",
-  }),
-  progress: integer("progress").notNull().default(0),
-  completed: boolean("completed").notNull().default(false),
-  completedAt: timestamp("completed_at"),
-  date: text("date").notNull(), // YYYY-MM-DD format
-});
-
 // ... 其他 schema 定义
 ```
 

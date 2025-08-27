@@ -1,7 +1,7 @@
 {
   "crons": [
     {
-      "path": "/api/cron/cleanup-quests",
+      "path": "/api/cron/cleanup-quests?secret=${CRON_SECRET}",
       "schedule": "0 5 * * *"
     }
   ]

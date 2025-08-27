@@ -3,15 +3,19 @@ import { lt } from "drizzle-orm";
 import db from "@/db/drizzle";
 import { userDailyQuests } from "@/db/schema";
 
-// 可以从环境变量中读取一个密钥
-// const CRON_SECRET = process.env.CRON_SECRET;
+// 从环境变量中读取密钥
+const CRON_SECRET = process.env.CRON_SECRET;
 
-export async function GET() {
-  // 可以在这里添加安全校验
-  // const { searchParams } = new URL(request.url);
-  // if (searchParams.get('secret') !== CRON_SECRET) {
-  //   return NextResponse.json({ status: 401, message: 'Unauthorized' });
-  // }
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  // 读取名为 'secret' 的参数值
+  const secret = searchParams.get("secret");
+
+  // 检查环境变量中是否有密钥，以及请求传入的密钥是否匹配
+  if (!CRON_SECRET || secret !== CRON_SECRET) {
+    // 如果不匹配，返回 401 Unauthorized 错误
+    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  }
 
   const RETENTION_DAYS = 3;
   const retentionDate = new Date();

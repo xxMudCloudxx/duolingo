@@ -17,6 +17,7 @@ import {
 import { redis } from "@/lib/redis";
 import { getSecondsUntilNext5AM, getTodayDateString } from "@/lib/utils";
 import { auth } from "@clerk/nextjs/server";
+import { format, toZonedTime } from "date-fns-tz";
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
@@ -90,7 +91,6 @@ export const upsertChallengeProgress = async (
       .update(userProgress)
       .set({
         hearts: Math.min(currentUserProgress.hearts + 1, 5), // 练习会奖励红心
-        points: currentUserProgress.points + CHALLENGE_POINTS,
       })
       .where(eq(userProgress.userId, userId));
 
@@ -130,7 +130,7 @@ export const upsertChallengeProgress = async (
     currentDailyPoints = newDailyPoints;
   } catch (e) {
     console.error("Redis INCRBY Error (daily_progress):", e);
-    // 优雅降级：如果 Redis 失败，从数据库读取旧的每日进度
+    // 如果 Redis 失败，从数据库读取旧的每日进度
     const dailyProgress = await getDailyProgress();
     currentDailyPoints = (dailyProgress?.points || 0) + CHALLENGE_POINTS;
   }
@@ -172,6 +172,21 @@ export const upsertChallengeProgress = async (
     await redis.del(`user_progress:${userId}`);
   } catch (e) {
     console.error("Redis DEL Error (user_progress):", e);
+  }
+
+  // 清除排行榜缓存
+  try {
+    await redis.del("leaderboard");
+  } catch (e) {
+    console.error("Redis DEL Error (leaderboard):", e);
+  }
+
+  // 清除Quests缓存
+  try {
+    const dateStr = format(toZonedTime(new Date(), timezone), "yyyy-MM-dd");
+    await redis.del(`quests:${userId}:${dateStr}`);
+  } catch (e) {
+    console.error("Redis DEL Error (quests):", e);
   }
 
   revalidatePath("/learn");

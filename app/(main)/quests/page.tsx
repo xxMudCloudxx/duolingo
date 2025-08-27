@@ -48,7 +48,7 @@ const QuestsPage = async () => {
             Complete quests by earning points in lessons. <br />
             Practice mode does not count and quests refresh daily.
           </p>
-          <QuestsClient dailyPoints={dailyProgress?.points || 0} />
+          <QuestsClient points={dailyProgress?.points || 0} />
         </div>
       </FeedWrapper>
     </div>

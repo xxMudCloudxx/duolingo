@@ -2,10 +2,10 @@
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import Link from "next/link";
-import { SidebarItem } from "./siderbar-item";
 import { ClerkLoaded, ClerkLoading, UserButton } from "@clerk/nextjs";
 import { DotIcon, Loader } from "lucide-react";
 import UserProfilePage from "@/app/(marketing)/user-profile/[[...user-profile]]/page";
+import { SidebarItem } from "./sidebar-item";
 
 type Props = {
   className?: string;

@@ -4,18 +4,16 @@ import { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
 import Image from "next/image";
 
-import { getQuestsAction } from "@/actions/quests"; // 1. 【关键修正】导入 Server Action
+import { getQuestsAction } from "@/actions/quests";
 import { Progress } from "@/components/ui/progress";
-import { quests as questsSchema } from "@/db/schema";
 import { formatTimeLeft, getSecondsUntilNext5AM } from "@/lib/utils";
 
-type Quest = typeof questsSchema.$inferSelect & { completed: boolean };
-
+type Quest = { id: number; title: string; value: number; completed: boolean };
 type Props = {
-  dailyPoints: number;
+  points: number;
 };
 
-export const QuestsClient = ({ dailyPoints }: Props) => {
+export const QuestsClient = ({ points }: Props) => {
   const [quests, setQuests] = useState<Quest[]>([]);
   const [isPending, startTransition] = useTransition();
   const [timeLeft, setTimeLeft] = useState("");
@@ -65,8 +63,9 @@ export const QuestsClient = ({ dailyPoints }: Props) => {
         {timeLeft}
       </div>
       {quests.map((quest) => {
-        // 使用从父组件传入的 dailyPoints 来计算进度
-        const progress = Math.min((dailyPoints / quest.value) * 100, 100);
+        // 使用从父组件传入的 points 来计算进度
+        const questValue = Math.max(quest.value, 1);
+        const progress = Math.min((points / questValue) * 100, 100);
 
         return (
           <div

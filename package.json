@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "npm run audio:generate && next build",
+    "prebuild": "tsx scripts/pregenerate_audio.ts",
+    "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "db:studio": "npx drizzle-kit studio",
@@ -32,6 +33,7 @@
     "clsx": "^2.1.1",
     "critters": "^0.0.23",
     "date-fns-tz": "^3.2.0",
+    "date-fns": "^3.0.0",
     "dotenv": "^17.2.1",
     "drizzle-orm": "^0.44.4",
     "ioredis": "^5.7.0",
