@@ -6,6 +6,7 @@
 <img src="https://img.shields.io/badge/TypeScript-5-blue" alt="TypeScript">
 <img src="https://img.shields.io/badge/Drizzle%20ORM-0.31-green" alt="Drizzle ORM">
 <img src="https://img.shields.io/badge/PostgreSQL-Neon-purple" alt="Neon PostgreSQL">
+<img src="https://img.shields.io/badge/Redis-Cache-red" alt="Redis">
 <img src="https://img.shields.io/badge/License-MIT-yellow" alt="License">
 </p>
 
@@ -17,7 +18,7 @@
 <br>
 前端采用 <code>Next.js 15/React 19/Tailwind CSS</code>，后端使用 <code>Drizzle ORM</code> 与 <code>Neon PostgreSQL</code> 数据库交互，
 <br>
-并通过 <strong>Clerk 进行用户认证</strong>，实现了完整的在线学习闭环。
+集成 <strong>Redis 缓存系统</strong> 和 <strong>每日任务功能</strong>，并通过 <strong>Clerk 进行用户认证</strong>，实现了完整的在线学习闭环。
 </p>
 ## 🚀 核心特性
 
@@ -30,12 +31,15 @@
 - **📱 响应式和美观的 UI** - 基于 Tailwind CSS 和 Radix UI 构建，确保在所有设备上都有一致且美观的用户体验。
 - **📊 模块化设计** - 清晰的项目结构，将数据库、组件、路由和业务逻辑分离，易于维护和扩展。
 - **🎤 智能语音合成 (TTS)** - 集成 OpenAI TTS API，为学习内容提供高质量的多语言语音合成，支持中文、英文、西班牙语、法语、日语等多种语言，并具备智能缓存机制。
+- **📅 每日任务系统** - 基于 Redis 的每日任务功能，包括任务生成、进度跟踪、完成奖励和定时重置，支持时区配置确保任务准确重置。
+- **⚡ Redis 缓存优化** - 集成 Redis 用于缓存用户进度、排行榜数据和任务状态，显著提升应用性能和响应速度。
 
 ### 🎨 用户体验
 
 - **📖 交互式课程** - 通过课程、单元和课程挑战，提供结构化的学习路径。
 - **🎮 游戏化学习** - 引入红心、积分和排行榜系统，激励用户持续学习。
 - **🔊 多媒体学习** - 在挑战中集成图片和音频，丰富学习体验。
+- **🎯 每日任务挑战** - 提供多样化的每日任务，增强用户粘性和学习动力。
 - **⚙️ 管理后台** - 内置 React Admin 管理面板，方便管理课程、课程、挑战等内容。
 - **🌙 响应式设计** - 移动优先的设计理念，支持 PWA，并可根据系统自动切换深色/浅色主题。
 
@@ -58,9 +62,11 @@ Zustand                // 轻量级状态管理
 ```typescript
 Drizzle ORM 0.31       // 类型安全的 SQL ORM
 Neon PostgreSQL        // 无服务器数据库
+Redis                  // 高性能缓存和任务管理
 Clerk                  // 用户认证和管理
 React Admin            // 管理后台框架
 OpenAI TTS API         // 智能语音合成服务
+Cron Jobs              // 定时任务调度
 ```
 
 ## 📚 架构详解
@@ -78,6 +84,8 @@ OpenAI TTS API         // 智能语音合成服务
 - **`challengeProgress`**: 记录用户完成的挑战。
 - **`userSubscription`**: 管理用户的订阅状态。
 - **`audioCache`**: 缓存 TTS 生成的音频文件，避免重复生成相同内容的语音。
+- **`dailyQuests`**: 存储每日任务信息，包括任务类型、目标值和奖励设置。
+- **`userQuestProgress`**: 跟踪用户每日任务的完成进度和状态。
 
 <!-- end list -->
 
@@ -149,12 +157,14 @@ duolingo/
 │   └── drizzle.ts        # 数据库连接配置
 ├── actions/              # Server Actions
 │   ├── challenge-progress.ts # 挑战进度管理
+│   ├── quests.ts         # 每日任务管理
 │   ├── text-to-speech.ts # TTS 语音合成功能
 │   ├── user-progress.ts  # 用户学习进度管理
 │   └── user-subscription.ts # 用户订阅管理
 ├── store/                # Zustand 状态管理
 ├── lib/                  # 工具函数和配置
 ├── scripts/              # 脚本工具
+│   ├── cleanup-quests.ts # 每日任务清理脚本
 │   ├── pregenerate_audio.ts # 音频预生成脚本
 │   ├── prod.ts           # 生产环境脚本
 │   ├── reset.ts          # 数据库重置脚本
@@ -216,11 +226,13 @@ Route (app)                    Size     First Load JS
 - **Streaming SSR** - 渐进式页面渲染，提升首屏加载速度
 - **Image Optimization** - 自动图片优化和懒加载
 
-**2. 数据库优化**
+**2. 数据库与缓存优化**
 
 - **连接池** - Neon 的自动连接池管理
 - **查询优化** - Drizzle ORM 的类型安全查询和索引优化
+- **Redis 缓存** - 用户进度、排行榜和任务数据的高性能缓存
 - **缓存策略** - Next.js 数据缓存和 Drizzle 查询缓存
+- **定时清理** - 自动清理过期的任务数据和缓存
 
 **3. 资源优化**
 
@@ -275,6 +287,13 @@ npm install
 
     # OpenAI TTS API (语音合成功能)
     OPENAI_API_KEY="<your_openai_api_key>"
+
+    # Redis 缓存配置
+    KV_URL="<your_KV_URL_key>"
+    KV_REST_API_URL="<your_KV_REST_API_URL_key>"
+    KV_REST_API_TOKEN="<your_KV_REST_API_TOKEN_key>"
+    KV_REST_API_READ_ONLY_TOKEN="<your_KV_REST_API_READ_ONLY_TOKEN_key>"
+    REDIS_URL="<your_REDIS_URL_key>"
     ```
 
 ### 数据库设置
@@ -313,6 +332,9 @@ npm run db:reset         # 重置数据库
 
 # TTS 音频管理
 npm run audio:generate # 预生成所有课程内容的音频文件
+
+# 任务管理
+npm run quest:cleanup  # 清理过期的每日任务数据
 
 # 代码质量
 npm run lint             # ESLint 检查
@@ -385,6 +407,86 @@ npm run audio:generate
 - 用户在学习过程中点击任意文本卡片
 - 系统自动检测语言并生成对应的语音
 - 音频文件自动缓存，提升后续访问速度
+
+## 📅 每日任务系统
+
+### 功能特性
+
+- **⏰ 智能时区支持** - 根据用户时区自动计算任务重置时间，确保每日任务准确更新
+- **🏆 奖励机制** - 完成任务可获得积分奖励，激励用户持续学习
+- **📊 进度跟踪** - 实时跟踪任务完成进度，提供直观的进度展示
+- **🔄 自动重置** - 每日自动重置任务状态，生成新的挑战目标
+
+### 技术实现
+
+**核心组件：**
+
+- `actions/quests.ts` - 每日任务核心功能实现
+- `scripts/cleanup-quests.ts` - 定时清理过期任务数据
+- `app/api/cron/` - Cron job API 路由
+- `components/quests.tsx` - 前端任务展示组件
+- `lib/redis.ts` - Redis 缓存配置和工具函数
+
+**工作流程：**
+
+1. 系统每日自动生成新的任务列表
+2. 用户学习行为触发任务进度更新
+3. Redis 缓存用户任务状态和进度数据
+4. 任务完成时自动发放奖励并更新用户积分
+5. 定时任务清理过期的任务数据，保持数据库整洁
+
+**任务类型：**
+
+```typescript
+const questTypes = {
+  LESSONS_COMPLETED: "lessons_completed", // 完成课程数
+  POINTS_EARNED: "points_earned", // 获得积分数
+  LOGIN_STREAK: "login_streak", // 连续登录天数
+  CHALLENGES_COMPLETED: "challenges_completed", // 完成挑战数
+};
+```
+
+### Redis 缓存优化
+
+**缓存策略：**
+
+- **用户进度缓存** - 缓存用户学习进度，减少数据库查询
+- **排行榜缓存** - 实时更新用户排名，提升排行榜响应速度
+- **任务状态缓存** - 缓存每日任务完成状态，优化任务页面加载
+- **会话缓存** - 缓存用户会话数据，提升用户体验
+
+### 环境配置
+
+**Redis 配置：**
+
+```bash
+# 设置 Redis 连接信息
+KV_URL="<your_KV_URL_key>"
+KV_REST_API_URL="<your_KV_REST_API_URL_key>"
+KV_REST_API_TOKEN="<your_KV_REST_API_TOKEN_key>"
+KV_REST_API_READ_ONLY_TOKEN="<your_KV_REST_API_READ_ONLY_TOKEN_key>"
+REDIS_URL="<your_REDIS_URL_key>"
+```
+
+**定时任务配置：**
+
+### 使用方式
+
+**手动清理任务：**
+
+```bash
+# 清理过期的每日任务数据
+npm run quest:cleanup
+```
+
+**API 端点：**
+
+- `GET /api/cron/cleanup-quests` - 清理过期任务数据
+
+**自动化部署：**
+
+- 在 Vercel 中配置 Cron Jobs，实现每日自动清理
+- 支持多时区部署，确保全球用户任务时间准确
 
 ## 📄 许可证
 

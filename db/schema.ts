@@ -1,4 +1,4 @@
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import {
   integer,
   pgEnum,
@@ -7,6 +7,9 @@ import {
   text,
   boolean,
   timestamp,
+  date,
+  uniqueIndex,
+  index,
 } from "drizzle-orm/pg-core";
 
 export const courses = pgTable("courses", {
@@ -107,6 +110,42 @@ export const audioCache = pgTable("audio_cache", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+export const quests = pgTable("quests", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  value: integer("value").notNull(),
+});
+
+export const userDailyQuests = pgTable(
+  "user_daily_quests",
+  {
+    id: serial("id").primaryKey(),
+    userId: text("user_id").notNull(),
+    questId: integer("quest_id")
+      .references(() => quests.id, { onDelete: "cascade" })
+      .notNull(),
+    completed: boolean("completed").notNull().default(false),
+    assignedAt: timestamp("assigned_at").notNull().defaultNow(),
+    // 日历日期，用于确保每个用户每天只分配一个任务
+    assignedDate: date("assigned_date")
+      .notNull()
+      .default(sql`CURRENT_DATE`),
+  },
+  (t) => ({
+    // 确保每个用户每天只分配一个任务
+    uqUserQuestPerDay: uniqueIndex("uq_udq_user_quest_day").on(
+      t.userId,
+      t.questId,
+      t.assignedDate
+    ),
+    // 加速按用户和分配时间的查询
+    idxUserAssignedAt: index("idx_udq_user_assigned_at").on(
+      t.userId,
+      t.assignedAt
+    ),
+  })
+);
+
 export const coursesRelations = relations(courses, ({ many }) => ({
   userProgress: many(userProgress),
   units: many(units),
@@ -136,7 +175,7 @@ export const lessonsRelations = relations(lessons, ({ one, many }) => ({
 }));
 
 export const challengesRelations = relations(challenges, ({ one, many }) => ({
-  lessons: one(lessons, {
+  lesson: one(lessons, {
     fields: [challenges.lessonId],
     references: [lessons.id],
   }),
@@ -160,6 +199,20 @@ export const challengesProgressRelations = relations(
     challenge: one(challenges, {
       fields: [challengeProgress.challengeId],
       references: [challenges.id],
+    }),
+  })
+);
+
+export const questsRelations = relations(quests, ({ many }) => ({
+  userDailyQuests: many(userDailyQuests),
+}));
+
+export const userDailyQuestsRelations = relations(
+  userDailyQuests,
+  ({ one }) => ({
+    quest: one(quests, {
+      fields: [userDailyQuests.questId],
+      references: [quests.id],
     }),
   })
 );

@@ -39,7 +39,7 @@ const LeaderBoardPage = async () => {
           hasActiveSubscription={isPro}
         />
         {!isPro && <Promo />}
-        <Quests points={userProgress.points} />
+        <Quests />
       </StickyWrapper>
       <FeedWrapper>
         <div className="w-full flex flex-col items-center">

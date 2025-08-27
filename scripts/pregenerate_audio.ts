@@ -23,7 +23,7 @@ const main = async () => {
       with: {
         challenge: {
           with: {
-            lessons: {
+            lesson: {
               with: {
                 unit: {
                   with: {
@@ -50,12 +50,12 @@ const main = async () => {
       if (
         !option.text ||
         option.audioSrc ||
-        !option.challenge?.lessons?.unit?.course?.title
+        !option.challenge?.lesson?.unit?.course?.title
       ) {
         continue;
       }
 
-      const courseTitle = option.challenge.lessons.unit.course.title;
+      const courseTitle = option.challenge.lesson.unit.course.title;
       const lang = courseTitleToLangCode[courseTitle];
       const text = option.text;
 
