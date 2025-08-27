@@ -77,7 +77,7 @@ export const QuestsClient = ({ points }: Props) => {
             const progress = Math.min((points / questValue) * 100, 100);
 
             return (
-              <div
+              <li
                 className="flex items-center w-full p-2 gap-x-3"
                 key={quest.id}
               >
@@ -93,7 +93,7 @@ export const QuestsClient = ({ points }: Props) => {
                   </p>
                   <Progress value={progress} className="h-2" />
                 </div>
-              </div>
+              </li>
             );
           })}
         </ul>

@@ -17,8 +17,8 @@ import {
 import { redis } from "@/lib/redis";
 import { getSecondsUntilNext5AM, getTodayDateString } from "@/lib/utils";
 import { auth } from "@clerk/nextjs/server";
-import { format, toZonedTime } from "date-fns-tz";
-import { and, eq } from "drizzle-orm";
+import { format, fromZonedTime, toZonedTime } from "date-fns-tz";
+import { and, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 /**
@@ -139,13 +139,21 @@ export const upsertChallengeProgress = async (
 
   const dailyQuests = await getQuests(timezone);
 
+  const nowTz = toZonedTime(new Date(), timezone);
+  const startInTz = new Date(nowTz.getTime());
+  startInTz.setHours(5, 0, 0, 0);
+  if (nowTz.getTime() < startInTz.getTime())
+    startInTz.setDate(startInTz.getDate() - 1);
+  const startUTC = fromZonedTime(startInTz, timezone);
+
   for (const quest of dailyQuests) {
     if (!quest.completed && currentDailyPoints >= quest.value) {
       const questEntry = await db.query.userDailyQuests.findFirst({
         where: and(
           eq(userDailyQuests.userId, userId),
           eq(userDailyQuests.questId, quest.id),
-          eq(userDailyQuests.completed, false)
+          eq(userDailyQuests.completed, false),
+          sql`${userDailyQuests.assignedAt} >= ${startUTC}`
         ),
       });
 
@@ -163,7 +171,7 @@ export const upsertChallengeProgress = async (
   await db
     .update(userProgress)
     .set({
-      points: currentUserProgress.points + totalPointsToAward,
+      points: sql`${userProgress.points} + ${totalPointsToAward}`,
     })
     .where(eq(userProgress.userId, userId));
 

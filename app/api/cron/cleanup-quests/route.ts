@@ -7,13 +7,12 @@ import { userDailyQuests } from "@/db/schema";
 const CRON_SECRET = process.env.CRON_SECRET;
 
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  // 读取名为 'secret' 的参数值
-  const secret = searchParams.get("secret");
+  // 从 Authorization 请求头中获取密钥
+  // Vercel 会自动添加 'Bearer ' 前缀
+  const authHeader = request.headers.get("authorization");
 
-  // 检查环境变量中是否有密钥，以及请求传入的密钥是否匹配
-  if (!CRON_SECRET || secret !== CRON_SECRET) {
-    // 如果不匹配，返回 401 Unauthorized 错误
+  // 检查密钥是否匹配
+  if (authHeader !== `Bearer ${CRON_SECRET}`) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 
