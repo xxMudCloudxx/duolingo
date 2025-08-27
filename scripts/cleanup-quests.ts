@@ -6,6 +6,15 @@ import { userDailyQuests } from "@/db/schema";
 // 定义数据保留期限（单位：天）。
 const RETENTION_DAYS = 3;
 
+/**
+ * Performs a one-time cleanup of old user daily-quest records.
+ *
+ * Deletes rows from the `userDailyQuests` table whose `assignedAt` timestamp
+ * is earlier than the configured retention window (RETENTION_DAYS). On error
+ * the process exits with code 1 to signal failure to the caller/scheduler.
+ *
+ * @returns A promise that resolves when the cleanup completes.
+ */
 async function main() {
   console.log("🚀 Starting daily quests cleanup job...");
 

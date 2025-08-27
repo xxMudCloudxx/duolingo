@@ -2,10 +2,27 @@ import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { toZonedTime } from "date-fns-tz";
 
+/**
+ * Combines multiple class name inputs into a single Tailwind-merged string.
+ *
+ * Accepts any inputs supported by `clsx` (strings, arrays, conditional objects, etc.), resolves them into a single class string, then deduplicates/merges Tailwind utility classes via `tailwind-merge`.
+ *
+ * @param inputs - One or more class values to be resolved and merged.
+ * @returns The resulting merged class string.
+ */
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+/**
+ * Builds an absolute URL by prefixing the provided path with the application's public base URL.
+ *
+ * The base URL is taken from the NEXT_PUBLIC_APP_URL environment variable. The function does not
+ * validate or normalize slashes, so `path` should include a leading '/' if required (e.g. '/login').
+ *
+ * @param path - The path portion to append to the app base URL.
+ * @returns The concatenation of `process.env.NEXT_PUBLIC_APP_URL` and `path`.
+ */
 export function absoluteUrl(path: string) {
   return `${process.env.NEXT_PUBLIC_APP_URL}${path}`;
 }
