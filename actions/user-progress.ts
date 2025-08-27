@@ -35,11 +35,14 @@ export const upsertUserProgress = async (courseId: number) => {
   const existingUserProgress = await getUserProgress();
 
   if (existingUserProgress) {
-    await db.update(userProgress).set({
-      activeCourseId: courseId,
-      userName: user.firstName || "User",
-      userImgSrc: user.imageUrl || "/icons/mascot.svg",
-    });
+    await db
+      .update(userProgress)
+      .set({
+        activeCourseId: courseId,
+        userName: user.firstName || "User",
+        userImgSrc: user.imageUrl || "/icons/mascot.svg",
+      })
+      .where(eq(userProgress.userId, userId));
 
     // --- 添加缓存清除逻辑 ---
     try {
