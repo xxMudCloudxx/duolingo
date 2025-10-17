@@ -491,7 +491,7 @@ npm run quest:cleanup
 
 ## 📄 许可证
 
-本项目使用 [MIT]([duolingo/LICENSE at main · xxMudCloudxx/duolingo](https://github.com/xxMudCloudxx/duolingo/blob/main/LICENSE)) 许可证。
+本项目使用 [MIT](https://github.com/xxMudCloudxx/duolingo/blob/main/LICENSE) 许可证。
 
 ## 🤝 贡献指南
 
