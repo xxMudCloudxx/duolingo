@@ -14,22 +14,34 @@ import {
   userDailyQuests,
   userProgress,
 } from "@/db/schema";
-import { redis } from "@/lib/redis";
+import { redis, cacheKeys } from "@/lib/redis";
 import { getSecondsUntilNext5AM, getTodayDateString } from "@/lib/utils";
 import { auth } from "@clerk/nextjs/server";
-import { format, fromZonedTime, toZonedTime } from "date-fns-tz";
+import { fromZonedTime, toZonedTime } from "date-fns-tz";
 import { and, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 /**
  * 更新用户挑战进度、分数和任务状态
  * - 正确区分【正常模式】和【练习模式】
- * - 正常模式下，使用 Redis 跟踪“今日分数”并检查任务进度
+ * - 正常模式下，使用 Redis 跟踪"今日分数"并检查任务进度
  * - 练习模式下，只更新总分和红心，不影响每日任务
  */
 export const upsertChallengeProgress = async (
   challengeId: number,
-  timezone: string
+  timezone: string,
+) => {
+  try {
+    return await _upsertChallengeProgressImpl(challengeId, timezone);
+  } catch (error) {
+    console.error("[upsertChallengeProgress] ERROR:", error);
+    throw error;
+  }
+};
+
+const _upsertChallengeProgressImpl = async (
+  challengeId: number,
+  timezone: string,
 ) => {
   const { userId } = await auth();
 
@@ -62,7 +74,7 @@ export const upsertChallengeProgress = async (
   const existingChallengeProgress = await db.query.challengeProgress.findFirst({
     where: and(
       eq(challengeProgress.userId, userId),
-      eq(challengeProgress.challengeId, challengeId)
+      eq(challengeProgress.challengeId, challengeId),
     ),
   });
 
@@ -86,17 +98,17 @@ export const upsertChallengeProgress = async (
       })
       .where(eq(challengeProgress.id, existingChallengeProgress.id));
 
-    // 更新分数和红心
+    // 更新红心（原子操作，capped at 5）
     await db
       .update(userProgress)
       .set({
-        hearts: Math.min(currentUserProgress.hearts + 1, 5), // 练习会奖励红心
+        hearts: sql`LEAST(${userProgress.hearts} + 1, 5)`,
       })
       .where(eq(userProgress.userId, userId));
 
     // 清除 user_progress 的缓存
     try {
-      await redis.del(`user_progress:${userId}`);
+      await redis.del(cacheKeys.userProgress(userId));
     } catch (e) {
       console.error("Redis DEL Error (user_progress):", e);
     }
@@ -110,33 +122,30 @@ export const upsertChallengeProgress = async (
     return;
   }
 
-  await db.insert(challengeProgress).values({
-    challengeId,
-    userId,
-    completed: true,
-  });
+  // === 正常模式 ===
 
+  // 使用用户时区生成日期键，确保与 quest 系统使用相同的日期
   const ttlInSeconds = getSecondsUntilNext5AM(timezone);
-  const dateStr = getTodayDateString();
-  const dailyProgressKey = `daily_progress:${userId}:${dateStr}`;
+  const dateStr = getTodayDateString(timezone);
+  const dailyProgressKey = cacheKeys.dailyProgress(userId, dateStr);
   let currentDailyPoints = 0;
 
+  // 先更新 Redis 每日计数器（原子操作，即使后续 DB 事务失败也可接受轻微超计）
   try {
     const newDailyPoints = await redis.incrby(
       dailyProgressKey,
-      CHALLENGE_POINTS
+      CHALLENGE_POINTS,
     );
     await redis.expire(dailyProgressKey, ttlInSeconds);
     currentDailyPoints = newDailyPoints;
   } catch (e) {
     console.error("Redis INCRBY Error (daily_progress):", e);
     // 如果 Redis 失败，从数据库读取旧的每日进度
-    const dailyProgress = await getDailyProgress();
+    const dailyProgress = await getDailyProgress(timezone);
     currentDailyPoints = (dailyProgress?.points || 0) + CHALLENGE_POINTS;
   }
 
-  let totalPointsToAward = CHALLENGE_POINTS;
-
+  // 预先计算需要完成的任务和奖励积分
   const dailyQuests = await getQuests(timezone);
 
   const nowTz = toZonedTime(new Date(), timezone);
@@ -146,6 +155,9 @@ export const upsertChallengeProgress = async (
     startInTz.setDate(startInTz.getDate() - 1);
   const startUTC = fromZonedTime(startInTz, timezone);
 
+  // 找出所有需要标记完成的 quest entries
+  const questEntriesToComplete: { entryId: number; questValue: number }[] = [];
+
   for (const quest of dailyQuests) {
     if (!quest.completed && currentDailyPoints >= quest.value) {
       const questEntry = await db.query.userDailyQuests.findFirst({
@@ -153,21 +165,43 @@ export const upsertChallengeProgress = async (
           eq(userDailyQuests.userId, userId),
           eq(userDailyQuests.questId, quest.id),
           eq(userDailyQuests.completed, false),
-          sql`${userDailyQuests.assignedAt} >= ${startUTC}`
+          sql`${userDailyQuests.assignedAt} >= ${startUTC}`,
         ),
       });
 
       if (questEntry) {
-        totalPointsToAward += quest.value;
-
-        await db
-          .update(userDailyQuests)
-          .set({ completed: true })
-          .where(eq(userDailyQuests.id, questEntry.id));
+        questEntriesToComplete.push({
+          entryId: questEntry.id,
+          questValue: quest.value,
+        });
       }
     }
   }
 
+  let totalPointsToAward = CHALLENGE_POINTS;
+  for (const entry of questEntriesToComplete) {
+    totalPointsToAward += entry.questValue;
+  }
+
+  // neon-http 驱动不支持 db.transaction()，按顺序执行写操作
+  // 积分更新使用原子 SQL（points + N），即使部分失败也不会出现双花
+
+  // 1. 插入挑战完成记录
+  await db.insert(challengeProgress).values({
+    challengeId,
+    userId,
+    completed: true,
+  });
+
+  // 2. 标记已完成的每日任务
+  for (const entry of questEntriesToComplete) {
+    await db
+      .update(userDailyQuests)
+      .set({ completed: true })
+      .where(eq(userDailyQuests.id, entry.entryId));
+  }
+
+  // 3. 更新用户积分（原子 SQL 加法，防止并发覆盖）
   await db
     .update(userProgress)
     .set({
@@ -175,24 +209,21 @@ export const upsertChallengeProgress = async (
     })
     .where(eq(userProgress.userId, userId));
 
-  // 清除 user_progress 的缓存
+  // 事务成功后清除缓存
   try {
-    await redis.del(`user_progress:${userId}`);
+    await redis.del(cacheKeys.userProgress(userId));
   } catch (e) {
     console.error("Redis DEL Error (user_progress):", e);
   }
 
-  // 清除排行榜缓存
   try {
-    await redis.del("leaderboard");
+    await redis.del(cacheKeys.leaderboard());
   } catch (e) {
     console.error("Redis DEL Error (leaderboard):", e);
   }
 
-  // 清除Quests缓存
   try {
-    const dateStr = format(toZonedTime(new Date(), timezone), "yyyy-MM-dd");
-    await redis.del(`quests:${userId}:${dateStr}`);
+    await redis.del(cacheKeys.quests(userId, dateStr));
   } catch (e) {
     console.error("Redis DEL Error (quests):", e);
   }

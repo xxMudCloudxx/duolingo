@@ -1,6 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { toZonedTime, fromZonedTime } from "date-fns-tz";
+import { format, toZonedTime, fromZonedTime } from "date-fns-tz";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -22,8 +22,13 @@ export const formatTimeLeft = (seconds: number) => {
   return `${minutes} minute${minutes > 1 ? "s" : ""} left`;
 };
 
-// 返回 'YYYY-MM-DD' 格式.
-export const getTodayDateString = () => new Date().toISOString().split("T")[0];
+// 返回 'YYYY-MM-DD' 格式，基于用户时区（默认 UTC）
+export const getTodayDateString = (timeZone?: string) => {
+  if (timeZone) {
+    return format(toZonedTime(new Date(), timeZone), "yyyy-MM-dd");
+  }
+  return new Date().toISOString().split("T")[0];
+};
 
 /**
  * 计算从现在到指定时区下一个凌晨5点所剩的秒数

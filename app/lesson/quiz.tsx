@@ -1,7 +1,7 @@
 "use client";
 
 import { challengeOptions, challenges, userSubscription } from "@/db/schema";
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Header } from "./header";
 import { QuestionBubble } from "./question-bubble";
 import { Challenge } from "./challenge";
@@ -16,7 +16,6 @@ import { useRouter } from "next/navigation";
 import Confetti from "react-confetti";
 import { useHeartsModal } from "@/store/use-hearts-modal";
 import { usePracticeModal } from "@/store/use-practice-modal";
-import { QuizLoading } from "@/components/loading-indicator";
 import { languageCode } from "@/constants";
 type Props = {
   initialPercentage: number;
@@ -60,10 +59,6 @@ export const Quiz = ({
     src: "/audio/common/incorrect.wav",
   });
 
-  const [pending, startTransition] = useTransition();
-  const [processingStage, setProcessingStage] = useState<
-    "loading" | "processing" | "complete"
-  >("loading");
   const router = useRouter();
 
   const [hearts, setHearts] = useState(initialHearts);
@@ -74,7 +69,7 @@ export const Quiz = ({
   const [challenges] = useState(initialLessonChallenges);
   const [activeIndex, setActiveIndex] = useState(() => {
     const uncompeletedIndex = challenges.findIndex(
-      (challenge) => !challenge.completed
+      (challenge) => !challenge.completed,
     );
     return uncompeletedIndex === -1 ? 0 : uncompeletedIndex;
   });
@@ -82,7 +77,11 @@ export const Quiz = ({
   const [selectedOption, setSelectedOption] = useState<number>();
   const [status, setStatus] = useState<"correct" | "wrong" | "none">("none");
 
+  // 追踪当前用户正在看的题目，用于异步回调判断是否还在同一题
+  const activeChallengeRef = useRef<number | undefined>(undefined);
+
   const challenge = challenges[activeIndex];
+  activeChallengeRef.current = challenge?.id;
   const options = challenge?.challengeOptions ?? [];
 
   useEffect(() => {
@@ -153,7 +152,6 @@ export const Quiz = ({
 
   const onContinue = () => {
     if (!selectedOption) return;
-    setProcessingStage("processing");
 
     if (status === "wrong") {
       setStatus("none");
@@ -173,46 +171,82 @@ export const Quiz = ({
     if (!correctOption) {
       return;
     }
+
+    // 捕获当前题目 ID，用于异步回调中判断用户是否还在同一题
+    const currentChallengeId = challenge.id;
+
     if (correctOption.id === selectedOption) {
-      startTransition(() => {
-        // 获取用户的时区字符串, 例如 "Asia/Tokyo", "America/New_York"
-        const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        upsertChallengeProgress(challenge.id, userTimezone)
-          .then((response) => {
-            if (response?.error === "hearts") {
-              openHeartsModal();
-              return;
+      // 立即更新 UI（乐观）
+      correctControls.play();
+      setStatus("correct");
+      setPercentage((prev) => prev + 100 / challenges.length);
+
+      // 练习模式下恢复红心
+      if (initialPercentage === 100) {
+        setHearts((prev) => Math.min(prev + 1, 5));
+      }
+
+      // 后台同步服务端
+      const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      upsertChallengeProgress(challenge.id, userTimezone)
+        .then((response) => {
+          if (response?.error === "hearts") {
+            // 服务端判定红心不足 → 回滚乐观状态
+            // 只有用户还在同一题时才回滚 status，避免篡改下一题的状态
+            if (activeChallengeRef.current === currentChallengeId) {
+              setStatus("none");
+              setSelectedOption(undefined);
             }
-
-            correctControls.play();
-            setStatus("correct");
-            setPercentage((prev) => prev + 100 / challenges.length);
-
-            // This is a practice
+            setPercentage((prev) => prev - 100 / challenges.length);
             if (initialPercentage === 100) {
-              setHearts((prev) => Math.min(prev + 1, 5));
-            }
-          })
-          .catch(() => toast("something went wrong"));
-      });
-    } else {
-      startTransition(() => {
-        reduceHearts(challenge.id)
-          .then((response) => {
-            if (response?.error === "hearts") {
-              openHeartsModal();
-              return;
-            }
-
-            incorrectControls.play();
-            setStatus("wrong");
-
-            if (!response?.error) {
               setHearts((prev) => Math.max(prev - 1, 0));
             }
-          })
-          .catch(() => toast("something went wrong"));
-      });
+            openHeartsModal();
+          }
+        })
+        .catch(() => {
+          // 服务端异常 → 回滚乐观状态
+          if (activeChallengeRef.current === currentChallengeId) {
+            setStatus("none");
+            setSelectedOption(undefined);
+          }
+          setPercentage((prev) => prev - 100 / challenges.length);
+          if (initialPercentage === 100) {
+            setHearts((prev) => Math.max(prev - 1, 0));
+          }
+          toast.error("提交失败，请重试");
+        });
+    } else {
+      // 立即更新 UI（乐观）
+      incorrectControls.play();
+      setStatus("wrong");
+
+      if (!userSubscription?.isActive && initialPercentage !== 100) {
+        setHearts((prev) => Math.max(prev - 1, 0));
+      }
+
+      // 后台同步服务端
+      reduceHearts(challenge.id)
+        .then((response) => {
+          if (response?.error === "hearts") {
+            // 真实红心已经是 0 → 打开红心不足弹窗
+            setHearts(0);
+            openHeartsModal();
+          } else if (
+            response?.error === "practice" ||
+            response?.error === "subscription"
+          ) {
+            // 服务端没有扣减红心 → 撤销乐观扣减
+            setHearts((prev) => Math.min(prev + 1, 5));
+          }
+        })
+        .catch(() => {
+          // 服务端异常 → 撤销乐观红心扣减
+          if (!userSubscription?.isActive) {
+            setHearts((prev) => Math.min(prev + 1, 5));
+          }
+          toast.error("提交失败，请重试");
+        });
     }
   };
 
@@ -241,7 +275,7 @@ export const Quiz = ({
                 onSelect={onSelect}
                 status={status}
                 selectedOption={selectedOption}
-                disabled={pending}
+                disabled={status !== "none"}
                 type={challenge.type}
                 languageCode={languageCode}
               />
@@ -249,18 +283,7 @@ export const Quiz = ({
           </div>
         </div>
       </div>
-      {pending && (
-        <div className="fixed inset-0 bg-black/20 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 shadow-lg">
-            <QuizLoading stage={processingStage} />
-          </div>
-        </div>
-      )}
-      <Footer
-        disabled={pending || !selectedOption}
-        status={status}
-        onCheck={onContinue}
-      />
+      <Footer disabled={!selectedOption} status={status} onCheck={onContinue} />
     </>
   );
 };

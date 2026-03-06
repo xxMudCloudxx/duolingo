@@ -8,9 +8,9 @@ import {
   getUserSubscription,
 } from "@/db/queries";
 import { challengeProgress, challenges, userProgress } from "@/db/schema";
-import { redis } from "@/lib/redis";
+import { redis, cacheKeys } from "@/lib/redis";
 import { auth, currentUser } from "@clerk/nextjs/server";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -31,7 +31,7 @@ export const upsertUserProgress = async (courseId: number) => {
   if (!course.units.length || !course.units[0].lessons.length) {
     throw new Error("Course is empty");
   }
-  const cacheKey = `user_progress:${userId}`; // 定义缓存键
+  const cacheKey = cacheKeys.userProgress(userId); // 定义缓存键
   const existingUserProgress = await getUserProgress();
 
   if (existingUserProgress) {
@@ -100,7 +100,7 @@ export const reduceHearts = async (challengeId: number) => {
   const existingChallengeProgress = await db.query.challengeProgress.findFirst({
     where: and(
       eq(challengeProgress.userId, userId),
-      eq(challengeProgress.challengeId, challengeId)
+      eq(challengeProgress.challengeId, challengeId),
     ),
   });
 
@@ -127,7 +127,7 @@ export const reduceHearts = async (challengeId: number) => {
 
   // 清除 user_progress 的缓存
   try {
-    await redis.del(`user_progress:${userId}`);
+    await redis.del(cacheKeys.userProgress(userId));
   } catch (e) {
     console.error("Redis DEL Error (user_progress):", e);
   }
@@ -144,6 +144,8 @@ export const refillHearts = async () => {
   if (!userId) {
     throw new Error("Unauthorized");
   }
+
+  // 前置检查：用于给前端返回明确的错误信息
   const currentUserProgress = await getUserProgress();
 
   if (!currentUserProgress) {
@@ -158,17 +160,30 @@ export const refillHearts = async () => {
     throw new Error("Not enough points");
   }
 
-  await db
+  // 原子 SQL：即使前置检查通过，仍用 WHERE 条件兜底防止并发双花
+  const result = await db
     .update(userProgress)
     .set({
       hearts: 5,
-      points: currentUserProgress.points - POINTS_TO_REFILL,
+      points: sql`${userProgress.points} - ${POINTS_TO_REFILL}`,
     })
-    .where(eq(userProgress.userId, currentUserProgress.userId));
+    .where(
+      and(
+        eq(userProgress.userId, userId),
+        sql`${userProgress.points} >= ${POINTS_TO_REFILL}`,
+        sql`${userProgress.hearts} < 5`,
+      ),
+    )
+    .returning(); // 告诉 PostgreSQL 返回被成功更新的行数据
+
+  // 如果数组为空，说明刚才的 WHERE 条件没拼上（即：被别人抢先花光了钱，或者爱心已经满了）
+  if (result.length === 0) {
+    throw new Error("Transaction failed: Not enough points or hearts full");
+  }
 
   // 清除 user_progress 的缓存
   try {
-    await redis.del(`user_progress:${userId}`);
+    await redis.del(cacheKeys.userProgress(userId));
   } catch (e) {
     console.error("Redis DEL Error (user_progress):", e);
   }

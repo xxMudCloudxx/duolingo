@@ -14,7 +14,7 @@ import {
   userSubscription,
 } from "./schema";
 import { courseTitleToLangCode } from "@/constants";
-import { redis } from "@/lib/redis";
+import { redis, cacheKeys } from "@/lib/redis";
 import { getSecondsUntilNext5AM, getTodayDateString } from "@/lib/utils";
 import { format, toZonedTime, fromZonedTime } from "date-fns-tz";
 
@@ -88,7 +88,7 @@ export const getUserProgress = cache(async () => {
     return null;
   }
 
-  const cacheKey = `user_progress:${userId}`;
+  const cacheKey = cacheKeys.userProgress(userId);
 
   try {
     const cachedProgress = await redis.get(cacheKey);
@@ -111,12 +111,14 @@ export const getUserProgress = cache(async () => {
     },
   });
 
-  try {
-    // 设置一个相对较短的过期时间，例如 10 分钟 (600秒)
-    // 因为用户进度可能会频繁变化
-    await redis.set(cacheKey, JSON.stringify(data), "EX", 600);
-  } catch (e) {
-    console.error("Redis SET Error (getUserProgress):", e);
+  // 仅在有数据时缓存，避免缓存 undefined 导致 JSON.parse 异常
+  if (data) {
+    try {
+      // NX: 仅当 key 不存在时才写入，防止并发请求用旧数据覆盖新数据
+      await redis.set(cacheKey, JSON.stringify(data), "EX", 600, "NX");
+    } catch (e) {
+      console.error("Redis SET Error (getUserProgress):", e);
+    }
   }
 
   return data;
@@ -182,7 +184,7 @@ export const getCourseProgress = cache(async () => {
           !challenge.challengeProgress ||
           challenge.challengeProgress.length === 0 ||
           challenge.challengeProgress.some(
-            (progress) => progress.completed === false
+            (progress) => progress.completed === false,
           )
         );
       });
@@ -258,11 +260,11 @@ export const getLessonPercentage = cache(async () => {
   }
 
   const completedChallenges = lesson.challenges.filter(
-    (challenge) => challenge.completed
+    (challenge) => challenge.completed,
   );
 
   const percentage = Math.round(
-    (completedChallenges.length / lesson.challenges.length) * 100
+    (completedChallenges.length / lesson.challenges.length) * 100,
   );
 
   return percentage;
@@ -297,7 +299,7 @@ export const getTopTenUsers = cache(async () => {
     return [];
   }
 
-  const cacheKey = "leaderboard";
+  const cacheKey = cacheKeys.leaderboard();
 
   // 优先从 Redis 缓存中获取排行榜数据
   try {
@@ -329,11 +331,11 @@ export const getTopTenUsers = cache(async () => {
     },
   });
 
-  // 3. 将从数据库获取的结果存入 Redis 缓存，并设置过期时间
+  // 将从数据库获取的结果存入 Redis 缓存，并设置过期时间
   try {
-    // 设置一个相对较短的过期时间，例如 10 分钟 (600 秒)
     const ttl = 60 * 10;
-    await redis.set(cacheKey, JSON.stringify(data), "EX", ttl);
+    // NX: 仅当 key 不存在时才写入，防止并发请求用旧数据覆盖新数据
+    await redis.set(cacheKey, JSON.stringify(data), "EX", ttl, "NX");
   } catch (error) {
     console.error("Redis SET error (leaderboard):", error);
   }
@@ -346,7 +348,7 @@ export const getAudioCache = async (text: string, languageCode: string) => {
   const data = await db.query.audioCache.findFirst({
     where: and(
       eq(audioCache.text, text),
-      eq(audioCache.languageCode, languageCode)
+      eq(audioCache.languageCode, languageCode),
     ),
   });
   return data;
@@ -400,7 +402,7 @@ export const getQuests = cache(async (timeZone: string) => {
   }
 
   const dateStr = format(toZonedTime(new Date(), timeZone), "yyyy-MM-dd");
-  const cacheKey = `quests:${userId}:${dateStr}`;
+  const cacheKey = cacheKeys.quests(userId, dateStr);
 
   // 从Redis读取
   try {
@@ -408,7 +410,7 @@ export const getQuests = cache(async (timeZone: string) => {
     if (cachedQuests) {
       const questsData = JSON.parse(cachedQuests);
       questsData.sort(
-        (a: { value: number }, b: { value: number }) => a.value - b.value
+        (a: { value: number }, b: { value: number }) => a.value - b.value,
       );
       return questsData as (typeof quests.$inferSelect & {
         completed: boolean;
@@ -436,7 +438,7 @@ export const getQuests = cache(async (timeZone: string) => {
   const dbQuests = await db.query.userDailyQuests.findMany({
     where: and(
       eq(userDailyQuests.userId, userId),
-      sql`${userDailyQuests.assignedAt} >= ${startOfDayUTC}`
+      sql`${userDailyQuests.assignedAt} >= ${startOfDayUTC}`,
     ),
     with: { quest: true },
   });
@@ -457,13 +459,17 @@ export const getQuests = cache(async (timeZone: string) => {
     const selectedQuests = allQuests; // TODO: 目前任务少，先返回所有
 
     // 将挑选出的任务插入到 user_daily_quests 表中
+    // onConflictDoNothing: 防止并发请求重复插入（唯一约束 userId+questId+assignedDate）
     if (selectedQuests.length > 0) {
-      await db.insert(userDailyQuests).values(
-        selectedQuests.map((quest) => ({
-          userId,
-          questId: quest.id,
-        }))
-      );
+      await db
+        .insert(userDailyQuests)
+        .values(
+          selectedQuests.map((quest) => ({
+            userId,
+            questId: quest.id,
+          })),
+        )
+        .onConflictDoNothing();
     }
     questsToReturn = selectedQuests.map((q) => ({ ...q, completed: false }));
   }
@@ -476,7 +482,7 @@ export const getQuests = cache(async (timeZone: string) => {
       cacheKey,
       JSON.stringify(questsToReturn),
       "EX",
-      ttlInSeconds
+      ttlInSeconds,
     );
   } catch (e) {
     console.error("Redis SET Error:", e);
@@ -487,14 +493,14 @@ export const getQuests = cache(async (timeZone: string) => {
 
 /**
  * 从 Redis 获取用户今日获得的分数
+ * @param timeZone - 可选，用户时区。传入时使用时区日期作为 key，与 quest 系统一致
  */
-export const getDailyProgress = cache(async () => {
+export const getDailyProgress = cache(async (timeZone?: string) => {
   const { userId } = await auth();
   if (!userId) return null;
 
-  const dateStr = getTodayDateString();
-  //  为用户的每日进度创建一个唯一的 Redis键, 例如: "daily_progress:user_123:2025-08-27"
-  const dailyProgressKey = `daily_progress:${userId}:${dateStr}`;
+  const dateStr = getTodayDateString(timeZone);
+  const dailyProgressKey = cacheKeys.dailyProgress(userId, dateStr);
 
   try {
     const dailyPoints = await redis.get(dailyProgressKey);

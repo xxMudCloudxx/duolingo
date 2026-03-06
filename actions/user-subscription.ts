@@ -4,13 +4,13 @@ import db from "@/db/drizzle";
 import { userProgress, userSubscription } from "@/db/schema";
 import { getUserProgress, getUserSubscription } from "@/db/queries";
 import { auth } from "@clerk/nextjs/server";
-import { eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { SUBSCRIPTION_PLANS } from "@/constants";
-import { redis } from "@/lib/redis";
+import { redis, cacheKeys } from "@/lib/redis";
 
 export const purchaseSubscription = async (
-  planType: keyof typeof SUBSCRIPTION_PLANS
+  planType: keyof typeof SUBSCRIPTION_PLANS,
 ) => {
   const { userId } = await auth();
 
@@ -69,16 +69,22 @@ export const purchaseSubscription = async (
       });
     }
 
+    // 使用原子 SQL 操作防止并发双花：仅在积分足够时扣分
     await db
       .update(userProgress)
       .set({
-        points: currentUserProgress.points - plan.points,
+        points: sql`${userProgress.points} - ${plan.points}`,
       })
-      .where(eq(userProgress.userId, currentUserProgress.userId));
+      .where(
+        and(
+          eq(userProgress.userId, currentUserProgress.userId),
+          sql`${userProgress.points} >= ${plan.points}`,
+        ),
+      );
 
     // 清除 user_progress 的缓存
     try {
-      await redis.del(`user_progress:${userId}`);
+      await redis.del(cacheKeys.userProgress(userId));
     } catch (e) {
       console.error("Redis DEL Error (user_progress):", e);
     }
