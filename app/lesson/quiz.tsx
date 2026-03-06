@@ -79,6 +79,7 @@ export const Quiz = ({
 
   // 追踪当前用户正在看的题目，用于异步回调判断是否还在同一题
   const activeChallengeRef = useRef<number | undefined>(undefined);
+  const pendingRef = useRef(false);
 
   const challenge = challenges[activeIndex];
   activeChallengeRef.current = challenge?.id;
@@ -156,6 +157,7 @@ export const Quiz = ({
     if (status === "wrong") {
       setStatus("none");
       setSelectedOption(undefined);
+      pendingRef.current = false;
       return;
     }
 
@@ -163,6 +165,16 @@ export const Quiz = ({
       onNext();
       setStatus("none");
       setSelectedOption(undefined);
+      pendingRef.current = false;
+      return;
+    }
+
+    if (
+      hearts === 0 &&
+      !userSubscription?.isActive &&
+      initialPercentage !== 100
+    ) {
+      openHeartsModal();
       return;
     }
 
@@ -171,6 +183,9 @@ export const Quiz = ({
     if (!correctOption) {
       return;
     }
+
+    if (pendingRef.current) return;
+    pendingRef.current = true;
 
     // 捕获当前题目 ID，用于异步回调中判断用户是否还在同一题
     const currentChallengeId = challenge.id;
@@ -190,6 +205,7 @@ export const Quiz = ({
       const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
       upsertChallengeProgress(challenge.id, userTimezone)
         .then((response) => {
+          pendingRef.current = false;
           if (response?.error === "hearts") {
             // 服务端判定红心不足 → 回滚乐观状态
             // 只有用户还在同一题时才回滚 status，避免篡改下一题的状态
@@ -201,10 +217,10 @@ export const Quiz = ({
             if (initialPercentage === 100) {
               setHearts((prev) => Math.max(prev - 1, 0));
             }
-            openHeartsModal();
           }
         })
         .catch(() => {
+          pendingRef.current = false;
           // 服务端异常 → 回滚乐观状态
           if (activeChallengeRef.current === currentChallengeId) {
             setStatus("none");
@@ -228,6 +244,7 @@ export const Quiz = ({
       // 后台同步服务端
       reduceHearts(challenge.id)
         .then((response) => {
+          pendingRef.current = false;
           if (response?.error === "hearts") {
             // 真实红心已经是 0 → 打开红心不足弹窗
             setHearts(0);
@@ -241,8 +258,9 @@ export const Quiz = ({
           }
         })
         .catch(() => {
+          pendingRef.current = false;
           // 服务端异常 → 撤销乐观红心扣减
-          if (!userSubscription?.isActive) {
+          if (!userSubscription?.isActive && initialPercentage !== 100) {
             setHearts((prev) => Math.min(prev + 1, 5));
           }
           toast.error("提交失败，请重试");
