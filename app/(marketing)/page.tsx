@@ -16,7 +16,9 @@ export default function Home() {
         </h1>
         <div className="flex flex-col items-center gap-y-3 max-w-[330px] w-full">
           <ClerkLoading>
-            <Loader className="h-5 w-5 text-muted-foreground animate-spin" />
+            <div className="h-[108px] w-full flex items-center justify-center">
+              <Loader className="h-5 w-5 text-muted-foreground animate-spin" />
+            </div>
           </ClerkLoading>
           <ClerkLoaded>
             <SignedOut>

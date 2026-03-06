@@ -21,7 +21,9 @@ export default function SignInPage() {
             Learn, practice, and master new languages with Duolingo
           </h1>
           <ClerkLoading>
-            <Loader className="h-5 w-5 text-muted-foreground animate-spin" />
+            <div className="h-[400px] w-full flex items-center justify-center">
+              <Loader className="h-5 w-5 text-muted-foreground animate-spin" />
+            </div>
           </ClerkLoading>
           <ClerkLoaded>
             <div className="h-full lg:flex flex-col items-center justify-center px-4 py-4 sm:min-w-[410px]  border border-slate-200 rounded-2xl">
