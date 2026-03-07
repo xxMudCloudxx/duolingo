@@ -2,7 +2,8 @@
 // 标准化的API工具函数
 
 import { NextResponse } from "next/server";
-import { SQL, count, and, eq } from "drizzle-orm";
+import { InferInsertModel, SQL, count, and, eq } from "drizzle-orm";
+import { AnyPgColumn, AnyPgTable } from "drizzle-orm/pg-core";
 import {
   ParsedQueryParams,
   DEFAULT_PAGINATION,
@@ -12,6 +13,8 @@ import {
 } from "./api-types";
 import { isAdmin } from "./admin";
 import db from "@/db/drizzle";
+
+type JsonObject = Record<string, unknown>;
 
 /**
  * 解析URL搜索参数为标准化格式
@@ -83,8 +86,8 @@ export function createApiResponse<T>(
  * Creates a generic GET list route handler
  */
 export function createGetListRoute<
-  TTable extends any,
-  TFilter = Record<string, any>,
+  TTable extends AnyPgTable,
+  TFilter extends Record<string, unknown> = Record<string, unknown>,
 >(
   resourceName: keyof typeof RESOURCE_DEFAULT_SORT,
   table: TTable,
@@ -99,23 +102,29 @@ export function createGetListRoute<
     const { pagination, filter } = parseQueryParams(searchParams, resourceName);
     const { start, end, limit } = pagination;
 
-    let query: any = db.select().from(table as any);
-    let countQuery: any = db.select({ value: count() }).from(table as any);
+    const tableRef = table as AnyPgTable;
 
-    if (buildWhereFn) {
-      const conditions = buildWhereFn(filter as any).filter(
-        (c): c is SQL => c !== undefined,
-      );
-      if (conditions.length > 0) {
-        const whereCondition = and(...conditions);
-        query = query.where(whereCondition);
-        countQuery = countQuery.where(whereCondition);
-      }
-    }
+    const whereCondition = buildWhereFn
+      ? and(
+          ...buildWhereFn(filter as TFilter).filter(
+            (c): c is SQL => c !== undefined,
+          ),
+        )
+      : undefined;
 
-    const data = await query.limit(limit).offset(start);
-    const totalResult = await countQuery;
-    const total = totalResult[0].value;
+    const data = whereCondition
+      ? await db
+          .select()
+          .from(tableRef)
+          .where(whereCondition)
+          .limit(limit)
+          .offset(start)
+      : await db.select().from(tableRef).limit(limit).offset(start);
+
+    const totalResult = whereCondition
+      ? await db.select({ value: count() }).from(tableRef).where(whereCondition)
+      : await db.select({ value: count() }).from(tableRef);
+    const total = totalResult[0]?.value ?? 0;
 
     return createApiResponse(data, total, start, end, resourceName);
   };
@@ -124,26 +133,33 @@ export function createGetListRoute<
 /**
  * Creates a generic POST route handler
  */
-export function createPostRoute<TTable extends any>(table: TTable) {
+export function createPostRoute<TTable extends AnyPgTable>(table: TTable) {
   return async (req: Request) => {
     if (!(await isAdmin())) {
       return new NextResponse("Unauthorized", { status: 403 });
     }
-    const body = await req.json();
-    const data = await db
-      .insert(table as any)
-      .values({ ...body })
-      .returning();
-    return NextResponse.json((data as any[])[0]);
+    const body = (await req.json()) as InferInsertModel<TTable>;
+    const data = (await db
+      .insert(table)
+      .values(body)
+      .returning()) as JsonObject[];
+    return NextResponse.json(data[0] ?? null);
   };
+}
+
+function parseIdFromParams(params: Record<string, string | number>): number {
+  const idParam = Object.values(params)[0];
+  const id =
+    typeof idParam === "string" ? Number.parseInt(idParam, 10) : idParam;
+  return id;
 }
 
 /**
  * Creates a generic GET (by ID) route handler
  */
-export function createGetByIdRoute<TTable extends any>(
+export function createGetByIdRoute<TTable extends AnyPgTable>(
   table: TTable,
-  idColumn: any,
+  idColumn: AnyPgColumn,
 ) {
   return async (
     req: Request,
@@ -153,13 +169,16 @@ export function createGetByIdRoute<TTable extends any>(
       return new NextResponse("Unauthorized", { status: 401 });
     }
     const resolvedParams = await params;
-    const idParam = Object.values(resolvedParams)[0];
-    const id = typeof idParam === "string" ? parseInt(idParam, 10) : idParam;
+    const id = parseIdFromParams(resolvedParams);
+    if (Number.isNaN(id)) {
+      return new NextResponse("Invalid ID", { status: 400 });
+    }
 
-    const data = await db
+    const tableRef = table as AnyPgTable;
+    const data = (await db
       .select()
-      .from(table as any)
-      .where(eq(idColumn, id));
+      .from(tableRef)
+      .where(eq(idColumn, id))) as JsonObject[];
 
     return NextResponse.json(data[0] || null);
   };
@@ -168,9 +187,9 @@ export function createGetByIdRoute<TTable extends any>(
 /**
  * Creates a generic PUT route handler
  */
-export function createPutRoute<TTable extends any>(
+export function createPutRoute<TTable extends AnyPgTable>(
   table: TTable,
-  idColumn: any,
+  idColumn: AnyPgColumn,
 ) {
   return async (
     req: Request,
@@ -179,16 +198,18 @@ export function createPutRoute<TTable extends any>(
     if (!(await isAdmin())) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
-    const body = await req.json();
+    const body = (await req.json()) as Partial<InferInsertModel<TTable>>;
     const resolvedParams = await params;
-    const idParam = Object.values(resolvedParams)[0];
-    const id = typeof idParam === "string" ? parseInt(idParam, 10) : idParam;
+    const id = parseIdFromParams(resolvedParams);
+    if (Number.isNaN(id)) {
+      return new NextResponse("Invalid ID", { status: 400 });
+    }
 
-    const data = await db
-      .update(table as any)
-      .set({ ...body })
+    const data = (await db
+      .update(table)
+      .set(body)
       .where(eq(idColumn, id))
-      .returning();
+      .returning()) as JsonObject[];
 
     return NextResponse.json(data[0]);
   };
@@ -197,9 +218,9 @@ export function createPutRoute<TTable extends any>(
 /**
  * Creates a generic DELETE route handler
  */
-export function createDeleteRoute<TTable extends any>(
+export function createDeleteRoute<TTable extends AnyPgTable>(
   table: TTable,
-  idColumn: any,
+  idColumn: AnyPgColumn,
 ) {
   return async (
     req: Request,
@@ -209,14 +230,16 @@ export function createDeleteRoute<TTable extends any>(
       return new NextResponse("Unauthorized", { status: 401 });
     }
     const resolvedParams = await params;
-    const idParam = Object.values(resolvedParams)[0];
-    const id = typeof idParam === "string" ? parseInt(idParam, 10) : idParam;
+    const id = parseIdFromParams(resolvedParams);
+    if (Number.isNaN(id)) {
+      return new NextResponse("Invalid ID", { status: 400 });
+    }
 
-    const data = await db
-      .delete(table as any)
+    const data = (await db
+      .delete(table)
       .where(eq(idColumn, id))
-      .returning();
+      .returning()) as JsonObject[];
 
-    return NextResponse.json((data as any[])[0]);
+    return NextResponse.json(data[0] ?? null);
   };
 }
