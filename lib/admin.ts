@@ -8,5 +8,5 @@ export const isAdmin = async () => {
     return false;
   }
 
-  return allowedIds.indexOf(userId) !== -1;
+  return allowedIds.includes(userId);
 };

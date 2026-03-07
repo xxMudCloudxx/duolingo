@@ -15,17 +15,9 @@ export interface FilterParams {
 }
 
 export interface BaseQueryParams
-  extends PaginationParams,
-    SortParams,
-    FilterParams {}
+  extends PaginationParams, SortParams, FilterParams {}
 
 // === 具体资源的筛选参数 ===
-// 课程目前确实不需要任何筛选参数
-export interface CourseFilterParams {
-  // courses 目前没有特殊筛选参数
-  id: number[]; // 单纯占位
-}
-
 export interface UnitFilterParams {
   courseIds?: number[];
 }
@@ -41,18 +33,6 @@ export interface ChallengeFilterParams {
 
 export interface ChallengeOptionFilterParams {
   challengeIds?: number[];
-}
-
-// === API响应类型 ===
-export interface ApiResponse<T> {
-  data: T[];
-  total: number;
-  range: [number, number];
-}
-
-export interface ApiError {
-  message: string;
-  status: number;
 }
 
 // === 查询参数解析结果 ===
@@ -72,7 +52,6 @@ export interface ParsedQueryParams {
 // === 默认值常量 ===
 export const DEFAULT_PAGINATION: [number, number] = [0, 9];
 export const DEFAULT_SORT: [string, "ASC" | "DESC"] = ["id", "ASC"];
-export const DEFAULT_FILTER = {};
 
 // === 资源特定的默认排序 ===
 export const RESOURCE_DEFAULT_SORT = {
@@ -88,7 +67,7 @@ export const createContentRangeHeader = (
   resource: string,
   start: number,
   end: number,
-  total: number
+  total: number,
 ): string => {
   return `${resource} ${start}-${end}/${total}`;
 };

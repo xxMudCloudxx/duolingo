@@ -1,60 +1,11 @@
-import db from "@/db/drizzle";
+// app/api/challengeOptions/[challengeOptionId]/route.ts
 import { challengeOptions } from "@/db/schema";
-import { isAdmin } from "@/lib/admin";
-import { eq } from "drizzle-orm";
-import { NextResponse } from "next/server";
+import {
+  createGetByIdRoute,
+  createPutRoute,
+  createDeleteRoute,
+} from "@/lib/api-utils";
 
-export const GET = async (
-  req: Request,
-  { params }: { params: Promise<{ challengeOptionId: number }> }
-) => {
-  if (!isAdmin()) {
-    return new NextResponse("Unauthorized", { status: 401 });
-  }
-
-  const { challengeOptionId } = await params;
-  const data = await db.query.challengeOptions.findFirst({
-    where: eq(challengeOptions.id, challengeOptionId),
-  });
-
-  return NextResponse.json(data);
-};
-
-export const PUT = async (
-  req: Request,
-  { params }: { params: Promise<{ challengeOptionId: number }> }
-) => {
-  if (!isAdmin()) {
-    return new NextResponse("Unauthorized", { status: 401 });
-  }
-
-  const body = await req.json();
-  const { challengeOptionId } = await params;
-
-  const data = await db
-    .update(challengeOptions)
-    .set({
-      ...body,
-    })
-    .where(eq(challengeOptions.id, challengeOptionId))
-    .returning();
-
-  return NextResponse.json(data[0]);
-};
-
-export const DELETE = async (
-  req: Request,
-  { params }: { params: Promise<{ challengeOptionId: number }> }
-) => {
-  if (!isAdmin()) {
-    return new NextResponse("Unauthorized", { status: 401 });
-  }
-
-  const { challengeOptionId } = await params;
-  const data = await db
-    .delete(challengeOptions)
-    .where(eq(challengeOptions.id, challengeOptionId))
-    .returning();
-
-  return NextResponse.json(data[0]);
-};
+export const GET = createGetByIdRoute(challengeOptions, challengeOptions.id);
+export const PUT = createPutRoute(challengeOptions, challengeOptions.id);
+export const DELETE = createDeleteRoute(challengeOptions, challengeOptions.id);

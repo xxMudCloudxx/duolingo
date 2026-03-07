@@ -1,56 +1,11 @@
-import db from "@/db/drizzle";
+// app/api/courses/[courseId]/route.ts
 import { courses } from "@/db/schema";
-import { isAdmin } from "@/lib/admin";
-import { eq } from "drizzle-orm";
-import { NextResponse } from "next/server";
+import {
+  createGetByIdRoute,
+  createPutRoute,
+  createDeleteRoute,
+} from "@/lib/api-utils";
 
-export const GET = async (
-  req: Request,
-  { params }: { params: Promise<{ courseId: number }> }
-) => {
-  if (!isAdmin()) {
-    return new NextResponse("Unauthorized", { status: 401 });
-  }
-  const { courseId } = await params;
-  const data = await db.query.courses.findFirst({
-    where: eq(courses.id, courseId),
-  });
-
-  return NextResponse.json(data);
-};
-
-export const PUT = async (
-  req: Request,
-  { params }: { params: Promise<{ courseId: number }> }
-) => {
-  if (!isAdmin()) {
-    return new NextResponse("Unauthorized", { status: 401 });
-  }
-  const body = await req.json();
-  const { courseId } = await params;
-  const data = await db
-    .update(courses)
-    .set({
-      ...body,
-    })
-    .where(eq(courses.id, courseId))
-    .returning();
-
-  return NextResponse.json(data[0]);
-};
-
-export const DELETE = async (
-  req: Request,
-  { params }: { params: Promise<{ courseId: number }> }
-) => {
-  if (!isAdmin()) {
-    return new NextResponse("Unauthorized", { status: 401 });
-  }
-  const { courseId } = await params;
-  const data = await db
-    .delete(courses)
-    .where(eq(courses.id, courseId))
-    .returning();
-
-  return NextResponse.json(data[0]);
-};
+export const GET = createGetByIdRoute(courses, courses.id);
+export const PUT = createPutRoute(courses, courses.id);
+export const DELETE = createDeleteRoute(courses, courses.id);
