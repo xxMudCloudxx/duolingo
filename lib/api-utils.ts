@@ -112,18 +112,20 @@ export function createGetListRoute<
         )
       : undefined;
 
-    const data = whereCondition
-      ? await db
-          .select()
-          .from(tableRef)
-          .where(whereCondition)
-          .limit(limit)
-          .offset(start)
-      : await db.select().from(tableRef).limit(limit).offset(start);
-
-    const totalResult = whereCondition
-      ? await db.select({ value: count() }).from(tableRef).where(whereCondition)
-      : await db.select({ value: count() }).from(tableRef);
+    const [data, totalResult] = whereCondition
+      ? await Promise.all([
+          db
+            .select()
+            .from(tableRef)
+            .where(whereCondition)
+            .limit(limit)
+            .offset(start),
+          db.select({ value: count() }).from(tableRef).where(whereCondition),
+        ])
+      : await Promise.all([
+          db.select().from(tableRef).limit(limit).offset(start),
+          db.select({ value: count() }).from(tableRef),
+        ]);
     const total = totalResult[0]?.value ?? 0;
 
     return createApiResponse(data, total, start, end, resourceName);
