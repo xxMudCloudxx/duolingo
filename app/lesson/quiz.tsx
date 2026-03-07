@@ -42,8 +42,10 @@ export const Quiz = ({
   const { open: openHeartsModal } = useHeartsModal();
   const { open: openPracticeModal } = usePracticeModal();
 
+  const isPracticeMode = initialPercentage === 100;
+
   useMount(() => {
-    if (initialPercentage === 100) {
+    if (isPracticeMode) {
       openPracticeModal();
     }
   });
@@ -64,7 +66,7 @@ export const Quiz = ({
   const [hearts, setHearts] = useState(initialHearts);
   const [lessonId] = useState(initialLessonId);
   const [percentage, setPercentage] = useState(() => {
-    return initialPercentage === 100 ? 0 : initialPercentage;
+    return isPracticeMode ? 0 : initialPercentage;
   });
   const [challenges] = useState(initialLessonChallenges);
   const [activeIndex, setActiveIndex] = useState(() => {
@@ -124,7 +126,10 @@ export const Quiz = ({
             Great job! <br /> You&lsquo;ve completed the lesson
           </h1>
           <div className="flex items-center gap-x-4 w-full">
-            <ResultCard variant="points" value={challenges.length * 10} />
+            <ResultCard
+              variant="points"
+              value={isPracticeMode ? 0 : challenges.length * 10}
+            />
             <ResultCard variant="hearts" value={hearts} />
           </div>
         </div>
@@ -169,11 +174,7 @@ export const Quiz = ({
       return;
     }
 
-    if (
-      hearts === 0 &&
-      !userSubscription?.isActive &&
-      initialPercentage !== 100
-    ) {
+    if (hearts === 0 && !userSubscription?.isActive && !isPracticeMode) {
       openHeartsModal();
       return;
     }
@@ -190,6 +191,8 @@ export const Quiz = ({
     // 捕获当前题目 ID，用于异步回调中判断用户是否还在同一题
     const currentChallengeId = challenge.id;
 
+    const isDeducted = !userSubscription?.isActive && !isPracticeMode;
+
     if (correctOption.id === selectedOption) {
       // 立即更新 UI（乐观）
       correctControls.play();
@@ -197,7 +200,7 @@ export const Quiz = ({
       setPercentage((prev) => prev + 100 / challenges.length);
 
       // 练习模式下恢复红心
-      if (initialPercentage === 100) {
+      if (isPracticeMode) {
         setHearts((prev) => Math.min(prev + 1, 5));
       }
 
@@ -214,7 +217,7 @@ export const Quiz = ({
               setSelectedOption(undefined);
             }
             setPercentage((prev) => prev - 100 / challenges.length);
-            if (initialPercentage === 100) {
+            if (isPracticeMode) {
               setHearts((prev) => Math.max(prev - 1, 0));
             }
           }
@@ -227,7 +230,7 @@ export const Quiz = ({
             setSelectedOption(undefined);
           }
           setPercentage((prev) => prev - 100 / challenges.length);
-          if (initialPercentage === 100) {
+          if (isPracticeMode) {
             setHearts((prev) => Math.max(prev - 1, 0));
           }
           toast.error("提交失败，请重试");
@@ -237,7 +240,7 @@ export const Quiz = ({
       incorrectControls.play();
       setStatus("wrong");
 
-      if (!userSubscription?.isActive && initialPercentage !== 100) {
+      if (isDeducted) {
         setHearts((prev) => Math.max(prev - 1, 0));
       }
 
@@ -248,19 +251,19 @@ export const Quiz = ({
           if (response?.error === "hearts") {
             // 真实红心已经是 0 → 打开红心不足弹窗
             setHearts(0);
-            openHeartsModal();
           } else if (
-            response?.error === "practice" ||
-            response?.error === "subscription"
+            (response?.error === "practice" ||
+              response?.error === "subscription") &&
+            isDeducted
           ) {
-            // 服务端没有扣减红心 → 撤销乐观扣减
+            // 服务端没有扣减红心且客户端执行了乐观扣减 → 撤销扣减
             setHearts((prev) => Math.min(prev + 1, 5));
           }
         })
         .catch(() => {
           pendingRef.current = false;
           // 服务端异常 → 撤销乐观红心扣减
-          if (!userSubscription?.isActive && initialPercentage !== 100) {
+          if (isDeducted) {
             setHearts((prev) => Math.min(prev + 1, 5));
           }
           toast.error("提交失败，请重试");
