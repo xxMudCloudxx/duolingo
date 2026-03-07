@@ -2,16 +2,16 @@
 // 标准化的API工具函数
 
 import { NextResponse } from "next/server";
-import { SQL } from "drizzle-orm";
+import { SQL, count, and, eq } from "drizzle-orm";
 import {
   ParsedQueryParams,
   DEFAULT_PAGINATION,
   DEFAULT_SORT,
-  DEFAULT_FILTER,
   RESOURCE_DEFAULT_SORT,
   createContentRangeHeader,
-  ApiError,
 } from "./api-types";
+import { isAdmin } from "./admin";
+import db from "@/db/drizzle";
 
 /**
  * 解析URL搜索参数为标准化格式
@@ -21,7 +21,7 @@ import {
  */
 export function parseQueryParams(
   searchParams: URLSearchParams,
-  resourceType: keyof typeof RESOURCE_DEFAULT_SORT
+  resourceType: keyof typeof RESOURCE_DEFAULT_SORT,
 ): ParsedQueryParams {
   // 解析分页参数
   const rangeParam = searchParams.get("range");
@@ -37,7 +37,7 @@ export function parseQueryParams(
 
   // 解析筛选参数
   const filterParam = searchParams.get("filter");
-  const filter = filterParam ? JSON.parse(filterParam) : DEFAULT_FILTER;
+  const filter = filterParam ? JSON.parse(filterParam) : {};
 
   return {
     pagination: {
@@ -67,12 +67,12 @@ export function createApiResponse<T>(
   total: number,
   start: number,
   end: number,
-  resourceName: string
+  resourceName: string,
 ): NextResponse {
   const headers = new Headers();
   headers.set(
     "Content-Range",
-    createContentRangeHeader(resourceName, start, end, total)
+    createContentRangeHeader(resourceName, start, end, total),
   );
   headers.set("Access-Control-Expose-Headers", "Content-Range");
 
@@ -80,121 +80,143 @@ export function createApiResponse<T>(
 }
 
 /**
- * 创建标准化的错误响应
- * @param message - 错误消息
- * @param status - HTTP状态码
- * @returns NextResponse对象
+ * Creates a generic GET list route handler
  */
-export function createErrorResponse(
-  message: string,
-  status: number
-): NextResponse {
-  const error: ApiError = { message, status };
-  return new NextResponse(JSON.stringify(error), { status });
+export function createGetListRoute<
+  TTable extends any,
+  TFilter = Record<string, any>,
+>(
+  resourceName: keyof typeof RESOURCE_DEFAULT_SORT,
+  table: TTable,
+  buildWhereFn?: (filter: TFilter) => (SQL | undefined)[],
+) {
+  return async (req: Request) => {
+    if (!(await isAdmin())) {
+      return new NextResponse("Unauthorized", { status: 403 });
+    }
+
+    const { searchParams } = new URL(req.url);
+    const { pagination, filter } = parseQueryParams(searchParams, resourceName);
+    const { start, end, limit } = pagination;
+
+    let query: any = db.select().from(table as any);
+    let countQuery: any = db.select({ value: count() }).from(table as any);
+
+    if (buildWhereFn) {
+      const conditions = buildWhereFn(filter as any).filter(
+        (c): c is SQL => c !== undefined,
+      );
+      if (conditions.length > 0) {
+        const whereCondition = and(...conditions);
+        query = query.where(whereCondition);
+        countQuery = countQuery.where(whereCondition);
+      }
+    }
+
+    const data = await query.limit(limit).offset(start);
+    const totalResult = await countQuery;
+    const total = totalResult[0].value;
+
+    return createApiResponse(data, total, start, end, resourceName);
+  };
 }
 
 /**
- * 验证管理员权限的中间件
- * @param isAdminFn - 管理员验证函数
- * @returns 如果不是管理员则返回错误响应，否则返回null
+ * Creates a generic POST route handler
  */
-export function validateAdmin(isAdminFn: () => boolean): NextResponse | null {
-  if (!isAdminFn()) {
-    return createErrorResponse("Unauthorized", 403);
-  }
-  return null;
+export function createPostRoute<TTable extends any>(table: TTable) {
+  return async (req: Request) => {
+    if (!(await isAdmin())) {
+      return new NextResponse("Unauthorized", { status: 403 });
+    }
+    const body = await req.json();
+    const data = await db
+      .insert(table as any)
+      .values({ ...body })
+      .returning();
+    return NextResponse.json((data as any[])[0]);
+  };
 }
 
 /**
- * 安全的JSON解析
- * @param jsonString - JSON字符串
- * @param defaultValue - 默认值
- * @returns 解析结果或默认值
+ * Creates a generic GET (by ID) route handler
  */
-export function safeJsonParse<T>(
-  jsonString: string | null,
-  defaultValue: T
-): T {
-  if (!jsonString) return defaultValue;
+export function createGetByIdRoute<TTable extends any>(
+  table: TTable,
+  idColumn: any,
+) {
+  return async (
+    req: Request,
+    { params }: { params: Promise<{ [key: string]: string | number }> },
+  ) => {
+    if (!(await isAdmin())) {
+      return new NextResponse("Unauthorized", { status: 401 });
+    }
+    const resolvedParams = await params;
+    const idParam = Object.values(resolvedParams)[0];
+    const id = typeof idParam === "string" ? parseInt(idParam, 10) : idParam;
 
-  try {
-    return JSON.parse(jsonString);
-  } catch (error) {
-    console.warn(`Failed to parse JSON: ${jsonString}`, error);
-    return defaultValue;
-  }
+    const data = await db
+      .select()
+      .from(table as any)
+      .where(eq(idColumn, id));
+
+    return NextResponse.json(data[0] || null);
+  };
 }
 
 /**
- * 构建WHERE条件数组
- * @param conditions - 条件对象
- * @returns SQL条件数组
+ * Creates a generic PUT route handler
  */
-export function buildWhereConditions(
-  conditions: Record<string, SQL | undefined>
-): SQL[] {
-  return Object.values(conditions).filter(
-    (condition): condition is SQL => condition !== undefined
-  );
+export function createPutRoute<TTable extends any>(
+  table: TTable,
+  idColumn: any,
+) {
+  return async (
+    req: Request,
+    { params }: { params: Promise<{ [key: string]: string | number }> },
+  ) => {
+    if (!(await isAdmin())) {
+      return new NextResponse("Unauthorized", { status: 401 });
+    }
+    const body = await req.json();
+    const resolvedParams = await params;
+    const idParam = Object.values(resolvedParams)[0];
+    const id = typeof idParam === "string" ? parseInt(idParam, 10) : idParam;
+
+    const data = await db
+      .update(table as any)
+      .set({ ...body })
+      .where(eq(idColumn, id))
+      .returning();
+
+    return NextResponse.json(data[0]);
+  };
 }
 
 /**
- * 应用WHERE条件
- * @param conditions - SQL条件数组
- * @returns 合并后的WHERE条件或undefined
+ * Creates a generic DELETE route handler
  */
-export function applyWhereConditions(conditions: SQL[]): SQL | undefined {
-  return conditions.length > 0 ? conditions[0] : undefined;
-}
+export function createDeleteRoute<TTable extends any>(
+  table: TTable,
+  idColumn: any,
+) {
+  return async (
+    req: Request,
+    { params }: { params: Promise<{ [key: string]: string | number }> },
+  ) => {
+    if (!(await isAdmin())) {
+      return new NextResponse("Unauthorized", { status: 401 });
+    }
+    const resolvedParams = await params;
+    const idParam = Object.values(resolvedParams)[0];
+    const id = typeof idParam === "string" ? parseInt(idParam, 10) : idParam;
 
-/**
- * 类型安全的排序字段验证
- * @param field - 排序字段
- * @param allowedFields - 允许的字段列表
- * @param defaultField - 默认字段
- * @returns 验证后的字段名
- */
-export function validateSortField(
-  field: string,
-  allowedFields: string[],
-  defaultField: string
-): string {
-  return allowedFields.includes(field) ? field : defaultField;
-}
+    const data = await db
+      .delete(table as any)
+      .where(eq(idColumn, id))
+      .returning();
 
-/**
- * 标准化的资源创建响应
- * @param data - 创建的数据
- * @param resourceName - 资源名称
- * @returns NextResponse对象
- */
-export function createResourceResponse<T>(data: T): NextResponse {
-  return new NextResponse(JSON.stringify(data), {
-    status: 201,
-    headers: {
-      "Content-Type": "application/json",
-    },
-  });
-}
-
-/**
- * 标准化的资源更新响应
- * @param data - 更新的数据
- * @returns NextResponse对象
- */
-export function updateResourceResponse<T>(data: T): NextResponse {
-  return new NextResponse(JSON.stringify(data), {
-    status: 200,
-    headers: {
-      "Content-Type": "application/json",
-    },
-  });
-}
-
-/**
- * 标准化的资源删除响应
- * @returns NextResponse对象
- */
-export function deleteResourceResponse(): NextResponse {
-  return new NextResponse(null, { status: 204 });
+    return NextResponse.json((data as any[])[0]);
+  };
 }
